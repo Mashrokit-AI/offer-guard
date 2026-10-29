@@ -99,3 +99,4 @@ loaded from local files at render time, never from the network.
 
 Everything in this repository was written during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026), mostly with **Muse Code**, Meta's coding agent.
 The commit history is the timeline of the work. After each Muse Code session we export its redacted log (`npm run buildlog:save -- <label>`); these logs are kept outside the public repo and can be shared with the judges on request.
+The session-by-session log and the exact prompts are in [docs/build/BUILD_LOG.md](docs/build/BUILD_LOG.md).
