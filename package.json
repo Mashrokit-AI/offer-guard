@@ -10,12 +10,16 @@
   "scripts": {
     "probe:meta": "tsx scripts/probe-meta-write.ts",
     "cleanup:probe": "tsx scripts/cleanup-probe.ts",
+    "killtest:spark": "tsx scripts/killtest-spark.ts",
+    "killtest:sam": "tsx scripts/killtest-sam.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "buildlog:save": "bash scripts/save-build-log.sh"
   },
   "dependencies": {
+    "@meta-sam/parser": "^0.1.0",
     "dotenv": "^16.4.5",
+    "openai": "^6.49.0",
     "sharp": "^0.34.2",
     "zod": "^3.25.76"
   },

@@ -2,3 +2,5 @@
 export * from './config.js';
 export * from './masking.js';
 export * from './guards.js';
+export * from './schemas.js';
+export * from './geometry.js';

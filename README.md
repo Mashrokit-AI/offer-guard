@@ -5,6 +5,27 @@ replacement when they don't. Meta Global AI Developer Hackathon (Indie track).
 
 Design source of truth: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Status
+
+Day-1 model kill tests (Oct 29, live Model API calls, read-only; Graph API untouched):
+
+- **Hebrew extraction (Spark 1.3)** — `npm run killtest:spark`: all semantic
+  fields PASS on all 3 ads (percent/scope/shipping/valid_until exact, verbatim
+  Hebrew offer words, tagline never listed as an offer, panel opaque correct).
+  Panel bbox IoU passes ad-02 (0.82) and ad-03 (0.93) but ad-01 scores 0.66
+  against the 0.70 threshold — Spark boxes the text block plus padding instead
+  of the full panel edges (one generic prompt improvement tried, threshold
+  kept). JSON-schema `response_format` worked first try; coordinates came back
+  in source pixels.
+- **Protection masks (SAM 3.1)** — `npm run killtest:sam`: ALL PASS on ad-02 +
+  ad-03. First phrases worked (`bottle`, `logo`; no box fallback needed);
+  product mask IoU 0.99/1.00 with fill 0.89/0.55; ad-02 protected∩panel = 0 px
+  (repair allowed); ad-03 protected∩panel = 1506 px (correct
+  "panel overlaps protected product" blocker). Overlays at
+  `artifacts/killtests/sam-<ad>.png` (gitignored) for human inspection.
+  Follow-up: `logo` segments the circle mark only, not the wordmark — the
+  repair pipeline must protect both (union phrases / box prompt).
+
 ## Day-1 probe
 
 Proves the Meta write path on our own account: upload a test image, create a
