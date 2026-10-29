@@ -11,7 +11,7 @@
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
+import { loadEnvFiles } from '../src/shared/env.js';
 import { loadConfig, type OfferGuardConfig } from '../src/shared/config.js';
 import { GraphApiError, formatGraphError, graphDelete } from '../src/server/meta/graph.js';
 import { appendJournal, nowIso } from '../src/server/workflow/journal.js';
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   }
   const mode: Mode = args.includes('--execute') ? 'execute' : 'dry-run';
 
-  dotenv.config({ path: join(REPO_ROOT, '.env') });
+  loadEnvFiles(REPO_ROOT);
   let config: OfferGuardConfig;
   try {
     config = loadConfig(process.env);

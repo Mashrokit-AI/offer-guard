@@ -14,7 +14,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
+import { loadEnvFiles } from '../src/shared/env.js';
 import { describeConfigForLog, loadConfig, type OfferGuardConfig } from '../src/shared/config.js';
 import { generateProbeTestImage } from '../src/server/repair/test-image.js';
 import { assertOnlyPaused } from '../src/shared/guards.js';
@@ -198,7 +198,7 @@ async function main(): Promise<void> {
   }
   const mode: Mode = args.includes('--execute') ? 'execute' : 'dry-run';
 
-  dotenv.config({ path: join(REPO_ROOT, '.env') });
+  loadEnvFiles(REPO_ROOT);
   let config: OfferGuardConfig;
   try {
     config = loadConfig(process.env);

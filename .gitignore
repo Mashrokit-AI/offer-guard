@@ -5,3 +5,7 @@ artifacts/
 *.log
 dist/
 .DS_Store
+secrets.env
+*.enc
+*.key
+*.pem
