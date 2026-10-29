@@ -26,6 +26,7 @@ import {
   graphPost,
   graphPostMultipart,
 } from '../src/server/meta/graph.js';
+import { isOptOutRejection, parseProbeArgs, ProbeArgsError } from '../src/server/meta/probe.js';
 import { appendJournal, nowIso, type JournalEntry } from '../src/server/workflow/journal.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -37,7 +38,8 @@ const PROBE_MESSAGE = 'Offer Guard probe – test only';
 const PROBE_LINK_NAME = 'Offer Guard probe';
 
 // Graph v25 documented opt-out for automatic creative enhancements.
-// If Meta rejects this field we log the error and retry once without it.
+// If Meta rejects this field (detected by numeric subcode, never message text)
+// we log the error and retry once without it.
 const ENHANCEMENT_OPT_OUT = {
   degrees_of_freedom_spec: {
     creative_features_spec: {
@@ -45,7 +47,6 @@ const ENHANCEMENT_OPT_OUT = {
     },
   },
 };
-const OPT_OUT_FIELD_MARKERS = ['degrees_of_freedom_spec', 'standard_enhancements', 'enroll_status'];
 
 type Mode = 'dry-run' | 'execute';
 
@@ -95,12 +96,15 @@ interface NamedNode {
 }
 
 function usage(exitCode: number): never {
-  console.log(`Usage: probe-meta-write [--execute]
+  console.log(`Usage: probe-meta-write [--execute] [--image-hash <hash>]
 
   (no flag)   Dry run: performs the safe reads (steps 1-2) and local test-image
               generation (step 3), prints the POSTs it would send (steps 4-6),
               and skips the readback (step 7).
   --execute   Actually sends steps 4-6 to Meta and performs the readback (step 7).
+  --image-hash <hash>
+              Reuse an already-uploaded image (32 hex chars): skips step 3
+              (local image generation) and step 4 (adimages upload).
 
 Journal: .local/probe-journal.jsonl (gitignored; request summaries never contain the token).`);
   process.exit(exitCode);
@@ -178,11 +182,6 @@ async function stopOnGraphError(mode: Mode, step: string, err: GraphApiError): P
   process.exit(1);
 }
 
-function looksLikeOptOutRejection(err: GraphApiError): boolean {
-  const haystack = `${err.body.message} ${err.body.error_user_msg ?? ''}`.toLowerCase();
-  return OPT_OUT_FIELD_MARKERS.some((marker) => haystack.includes(marker.toLowerCase()));
-}
-
 async function generateTestImage(): Promise<{ path: string; bytes: number }> {
   const image = await generateProbeTestImage(TEST_IMAGE_PATH);
   return { path: image.path, bytes: image.bytes };
@@ -190,13 +189,19 @@ async function generateTestImage(): Promise<{ path: string; bytes: number }> {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  if (args.includes('--help') || args.includes('-h')) usage(0);
-  const unknown = args.filter((a) => a !== '--execute');
-  if (unknown.length > 0) {
-    console.log(`Unknown flags: ${unknown.join(' ')}`);
-    usage(1);
+  let parsed: { mode: Mode; imageHash: string | undefined; help: boolean };
+  try {
+    parsed = parseProbeArgs(args);
+  } catch (err) {
+    if (err instanceof ProbeArgsError) {
+      console.log(err.message);
+      usage(1);
+    }
+    throw err;
   }
-  const mode: Mode = args.includes('--execute') ? 'execute' : 'dry-run';
+  if (parsed.help) usage(0);
+  const mode: Mode = parsed.mode;
+  const reuseImageHash = parsed.imageHash;
 
   loadEnvFiles(REPO_ROOT);
   let config: OfferGuardConfig;
@@ -217,6 +222,9 @@ async function main(): Promise<void> {
   for (const [k, v] of Object.entries(described)) console.log(`  ${k}=${v}`);
   console.log('');
 
+  if (reuseImageHash) {
+    console.log(`reusing --image-hash ${reuseImageHash}: steps 3-4 will be skipped.`);
+  }
   if (mode === 'dry-run') {
     console.log('DRY RUN: steps 4-6 will be printed, not sent. Pass --execute to send them.\n');
   }
@@ -310,24 +318,52 @@ async function main(): Promise<void> {
     throw err;
   }
 
-  // ---- Step 3: generate the 1080x1080 test PNG locally (both modes) ----
+  // ---- Step 3: generate the 1080x1080 test PNG locally (both modes; skipped with --image-hash) ----
   console.log('--- Step 3: generate 1080x1080 test PNG locally ---');
-  const image = await generateTestImage();
-  await logStep(
-    mode,
-    'step-3-image',
-    {
-      request: { method: 'LOCAL', summary: 'sharp: 1080x1080 navy PNG + centered 840x420 offer panel, no text' },
-      responseSummary: `path=.local/probe-test-image.png bytes=${image.bytes}`,
-    },
-    [`Generated .local/probe-test-image.png (1080x1080, ${image.bytes} bytes).`],
-  );
+  const image = reuseImageHash ? undefined : await generateTestImage();
+  if (image) {
+    await logStep(
+      mode,
+      'step-3-image',
+      {
+        request: { method: 'LOCAL', summary: 'sharp: 1080x1080 navy PNG + centered 840x420 offer panel, no text' },
+        responseSummary: `path=.local/probe-test-image.png bytes=${image.bytes}`,
+      },
+      [`Generated .local/probe-test-image.png (1080x1080, ${image.bytes} bytes).`],
+    );
+  } else {
+    await logStep(
+      mode,
+      'step-3-image',
+      {
+        request: { method: 'LOCAL', summary: 'skipped (--image-hash given)' },
+        note: 'skipped: reusing provided image hash, no local image generated',
+      },
+      [`Skipped: reusing --image-hash ${reuseImageHash} (no local image generated).`],
+    );
+  }
 
-  // ---- Step 4: POST /act_{id}/adimages ----
+  // ---- Step 4: POST /act_{id}/adimages (skipped with --image-hash) ----
   console.log('--- Step 4: POST /act_{id}/adimages ---');
-  let imageHash: string | undefined;
+  let imageHash: string | undefined = reuseImageHash;
   const uploadFileName = 'probe-test-image.png';
-  if (mode === 'dry-run') {
+  if (reuseImageHash) {
+    await logStep(
+      mode,
+      'step-4-adimages',
+      {
+        request: {
+          method: 'POST',
+          summary: `skipped: reusing provided image hash for /act_${config.META_AD_ACCOUNT_ID}/adimages`,
+        },
+        responseIds: { image_hash: reuseImageHash },
+        responseSummary: `image_hash=${reuseImageHash}`,
+        note: 'skipped: reusing --image-hash, no upload sent',
+      },
+      [`Skipped upload: reusing image_hash=${reuseImageHash} (persisted to journal)`],
+    );
+  } else if (mode === 'dry-run') {
+    if (!image) fail(['Internal error: no test image was generated and no --image-hash was given.']);
     const summary = `POST https://graph.facebook.com/${config.META_GRAPH_VERSION}/act_${config.META_AD_ACCOUNT_ID}/adimages multipart(file ${uploadFileName}, ${image.bytes} bytes)`;
     await logStep(
       mode,
@@ -468,7 +504,7 @@ async function main(): Promise<void> {
         'DRY RUN would send:',
         `  POST /act_${config.META_AD_ACCOUNT_ID}/adcreatives`,
         `  ${JSON.stringify(creativePayload, null, 2).split('\n').join('\n  ')}`,
-        '  (includes degrees_of_freedom_spec opt-out of standard enhancements; on rejection: log, retry once without it)',
+        '  (includes degrees_of_freedom_spec opt-out; on subcode-3858504 rejection: log, retry once without it)',
       ],
     );
   } else {
@@ -486,12 +522,14 @@ async function main(): Promise<void> {
         {
           request: { method: 'POST', summary: res.requestSummary },
           responseIds: { creative_id: creativeId },
-          responseSummary: `name=${creativeName} (with enhancements opt-out)`,
+          responseSummary: `name=${creativeName} payload_variant=with-degrees_of_freedom_spec-opt-out`,
+          note: 'payload_variant=with-degrees_of_freedom_spec-opt-out (Meta accepted the opt-out)',
         },
         [`POST adcreatives -> creative_id=${creativeId} (persisted to journal)`],
       );
     } catch (err) {
-      if (err instanceof GraphApiError && looksLikeOptOutRejection(err)) {
+      const requestContainedOptOut = 'degrees_of_freedom_spec' in creativePayload;
+      if (err instanceof GraphApiError && isOptOutRejection(err.body, requestContainedOptOut)) {
         const text = formatGraphError(err);
         console.log(text);
         console.log('Meta rejected the enhancements opt-out field. Retrying ONCE without it...');
@@ -526,7 +564,8 @@ async function main(): Promise<void> {
             {
               request: { method: 'POST', summary: retry.requestSummary },
               responseIds: { creative_id: creativeId },
-              note: 'REPORT: Meta rejected degrees_of_freedom_spec opt-out; creative was created WITHOUT the opt-out',
+              responseSummary: `name=${creativeName} payload_variant=without-opt-out`,
+              note: 'REPORT: payload_variant=without-opt-out — Meta rejected degrees_of_freedom_spec; creative was created WITHOUT the opt-out',
             },
             [
               `Retry without opt-out -> creative_id=${creativeId} (persisted to journal)`,
