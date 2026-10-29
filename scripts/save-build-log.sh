@@ -10,7 +10,7 @@ mkdir -p "$out_dir" "$backup_dir"
 file="$out_dir/${stamp}-${label}.json"
 "$HOME/.local/bin/muse" export --last --redacted --out "$file" >/dev/null
 # refuse to keep a log that contains something that looks like a real Meta token
-if grep -qE 'EAA[A-Za-z0-9]{20,}' "$file"; then
+if grep -qE 'EAA[A-Za-z0-9]{20,}|LLM[_|][0-9]{6,}[_|][A-Za-z0-9]{8,}' "$file"; then
   echo "WARNING: $file looks like it contains a Meta access token — not copied to backup. Inspect it." >&2
   exit 1
 fi
