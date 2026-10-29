@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "brand": "GALI (fictional brand, synthetic test data)",
+  "discount": { "percent": 20, "scope": "selected_models" },
+  "shipping": "paid",
+  "valid_until": "2026-11-10",
+  "timezone": "Asia/Jerusalem",
+  "required_disclosures": ["valid until date"],
+  "notes": "Approved offer for the Offer Guard test campaign. All ads and pages are synthetic."
+}

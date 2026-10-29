@@ -1,0 +1,28 @@
+{
+  "name": "offer-guard",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Offer Guard — verify ad promises against the approved offer (Meta hackathon)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "probe:meta": "tsx scripts/probe-meta-write.ts",
+    "cleanup:probe": "tsx scripts/cleanup-probe.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "buildlog:save": "bash scripts/save-build-log.sh"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "sharp": "^0.34.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
+  }
+}
