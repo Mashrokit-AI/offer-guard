@@ -31,12 +31,20 @@ import {
   SYSTEM_PROMPT,
 } from '../src/server/models/extract-ad.js';
 import { boxIoU } from '../src/shared/geometry.js';
+import { parseLang, t } from '../src/shared/i18n.js';
 import type { AdClaims } from '../src/shared/schemas.js';
 import { loadGroundTruth, type AdGroundTruth } from './ground-truth.js';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(SCRIPT_DIR, '..');
-const ADS = ['ad-01-clean', 'ad-02-wrong', 'ad-03-overlap'] as const;
+const ADS = [
+  'ad-01-clean',
+  'ad-02-wrong',
+  'ad-03-overlap',
+  'ad-01-clean-en',
+  'ad-02-wrong-en',
+  'ad-03-overlap-en',
+] as const;
 const PANEL_IOU_THRESHOLD = 0.7;
 
 interface FieldCheck {
@@ -67,6 +75,12 @@ function sumUsage(usages: Array<ModelUsage | undefined>): { in: number; out: num
 
 function checkAd(ad: string, claims: AdClaims, gt: AdGroundTruth): FieldCheck[] {
   const checks: FieldCheck[] = [];
+  const langOk = claims.language === gt.language;
+  checks.push({
+    field: 'language',
+    pass: langOk,
+    detail: `got ${claims.language}, want ${gt.language}`,
+  });
   const percentOk = claims.discount.percent === gt.discount.percent;
   checks.push({
     field: 'percent',
@@ -97,7 +111,7 @@ function checkAd(ad: string, claims: AdClaims, gt: AdGroundTruth): FieldCheck[] 
     pass: iou >= PANEL_IOU_THRESHOLD,
     detail: claims.panel ? `IoU=${iou.toFixed(3)} box=${JSON.stringify(claims.panel.bbox)}` : 'no panel reported',
   });
-  if (ad === 'ad-01-clean' || ad === 'ad-02-wrong') {
+  if (!ad.startsWith('ad-03')) {
     const opaqueOk = claims.panel?.opaque === gt.panel.opaque;
     checks.push({
       field: 'panel opaque',
@@ -129,11 +143,12 @@ function checkAd(ad: string, claims: AdClaims, gt: AdGroundTruth): FieldCheck[] 
 
 async function main(): Promise<void> {
   loadEnvFiles(REPO_ROOT);
+  const lang = parseLang(process.argv.slice(2));
   const config = loadModelConfig(process.env);
   const gt = await loadGroundTruth(REPO_ROOT);
   const client = createModelClient(config);
 
-  console.log('=== Kill test: Hebrew extraction (Spark 1.3) ===');
+  console.log(`=== ${t(lang, 'killtest_spark_title')} ===`);
   console.log(`model=${config.MODEL_EXTRACT} base=${config.MODEL_API_BASE}`);
   const described = describeModelConfigForLog(config);
   console.log(`key=${described['MODEL_API_KEY']}`);
@@ -207,10 +222,10 @@ async function main(): Promise<void> {
           `tokens(in=${usage.in} out=${usage.out} total=${usage.total}) attempts=${result.attempts.length}`,
       );
       for (const c of checks) {
-        console.log(`  [${c.pass ? 'PASS' : 'FAIL'}] ${c.field}: ${c.detail}`);
+        console.log(`  [${t(lang, c.pass ? 'word_pass' : 'word_fail')}] ${c.field}: ${c.detail}`);
       }
       console.log(`  artifact: ${path}`);
-      console.log(`  => ${ad}: ${adPass ? 'PASS' : 'FAIL'}\n`);
+      console.log(`  => ${ad}: ${t(lang, adPass ? 'word_pass' : 'word_fail')}\n`);
     } catch (err) {
       allPass = false;
       const attempts = err instanceof ExtractError ? err.attempts : [];
@@ -230,14 +245,14 @@ async function main(): Promise<void> {
         },
         [config.MODEL_API_KEY],
       );
-      console.log(`  [FAIL] extraction error: ${err instanceof Error ? err.message : String(err)}\n`);
+      console.log(`  [${t(lang, 'word_fail')}] extraction error: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 
   const total = sumUsage(allUsages);
-  console.log(`API calls: ${apiCalls}; tokens: in=${total.in} out=${total.out} total=${total.total}`);
+  console.log(`${t(lang, 'line_api_calls', { count: apiCalls })}; ${t(lang, 'line_usage', { in: total.in, out: total.out, total: total.total })}`);
   console.log(`Cost: ${total.cost !== null ? total.cost : '(not reported by API)'}`);
-  console.log(allPass ? 'SPARK KILL TEST: ALL PASS' : 'SPARK KILL TEST: FAILURES PRESENT');
+  console.log(allPass ? t(lang, 'spark_all_pass') : t(lang, 'spark_failures'));
   process.exit(allPass ? 0 : 1);
 }
 

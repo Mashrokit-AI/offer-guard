@@ -65,7 +65,13 @@ export type UnreadableRegion = z.infer<typeof unreadableSchema>;
  * gating is evidence coverage + deterministic rules, never self-reported scores.
  * Unknown extra keys are stripped, not rejected, so a chatty model still validates.
  */
+export const languageSchema = z.enum(['he', 'en']);
+
+export type AdLanguage = z.infer<typeof languageSchema>;
+
 export const adClaimsSchema = z.object({
+  /** Language of the printed offer text in the image. */
+  language: languageSchema,
   offer_texts: z.array(offerTextSchema),
   discount: discountSchema,
   shipping: shippingSchema,

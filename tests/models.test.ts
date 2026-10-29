@@ -18,6 +18,7 @@ import { isTransientModelError, normalizeUsage, withModelRetry } from '../src/se
 
 // Fictional offer text for tests only — no real brands, IDs or secrets.
 const VALID_CLAIMS = {
+  language: 'en',
   offer_texts: [{ text: '50% sale on everything today', bbox: { x: 10, y: 20, w: 100, h: 30 }, in_panel: true }],
   discount: { percent: 50, scope: 'all', verbatim: '50% sale' },
   shipping: { terms: 'unspecified', verbatim: '' },

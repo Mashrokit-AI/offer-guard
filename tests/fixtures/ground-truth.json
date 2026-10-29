@@ -4,6 +4,7 @@
   "ads": {
     "ad-01-clean": {
       "file": "fixtures/ads/ad-01-clean.png",
+      "language": "he",
       "panel": { "bbox": { "x": 90, "y": 840, "w": 900, "h": 170 }, "opaque": true, "radius": 28 },
       "offer_lines": ["20% הנחה על דגמים נבחרים", "בתוקף עד 10.11 · משלוח בתשלום"],
       "offer_must_contain": ["20", "הנחה", "נבחרים", "10.11", "משלוח", "בתשלום"],
@@ -17,6 +18,7 @@
     },
     "ad-02-wrong": {
       "file": "fixtures/ads/ad-02-wrong.png",
+      "language": "he",
       "panel": { "bbox": { "x": 90, "y": 840, "w": 900, "h": 170 }, "opaque": true, "radius": 28 },
       "offer_lines": ["30% הנחה על הכל", "+ משלוח חינם · בתוקף עד 10.11"],
       "offer_must_contain": ["30", "הנחה", "הכל", "10.11", "משלוח", "חינם"],
@@ -30,6 +32,7 @@
     },
     "ad-03-overlap": {
       "file": "fixtures/ads/ad-03-overlap.png",
+      "language": "he",
       "panel": {
         "bbox": { "x": 150, "y": 470, "w": 780, "h": 190 },
         "opaque": false,
@@ -46,6 +49,54 @@
       "logo_bbox": { "x": 786, "y": 56, "w": 230, "h": 64 },
       "tagline": { "text": "בקבוק תרמי · 750 מ״ל", "bbox": { "x": 700, "y": 140, "w": 314, "h": 42 } },
       "tagline_forbidden_in_offers": ["תרמי", "750"]
+    },
+    "ad-01-clean-en": {
+      "file": "fixtures/ads/ad-01-clean-en.png",
+      "language": "en",
+      "panel": { "bbox": { "x": 90, "y": 840, "w": 900, "h": 170 }, "opaque": true, "radius": 28 },
+      "offer_lines": ["20% off selected models", "Valid until 10.11 · paid shipping"],
+      "offer_must_contain": ["20", "off", "selected", "models", "10.11", "paid", "shipping"],
+      "discount": { "percent": 20, "scope": "selected_models" },
+      "shipping": "paid",
+      "valid_until": "10.11",
+      "product_bbox": { "x": 440, "y": 210, "w": 200, "h": 558 },
+      "logo_bbox": { "x": 786, "y": 56, "w": 230, "h": 64 },
+      "tagline": { "text": "Thermal bottle · 750 ml", "bbox": { "x": 665, "y": 140, "w": 349, "h": 42 } },
+      "tagline_forbidden_in_offers": ["Thermal", "750"]
+    },
+    "ad-02-wrong-en": {
+      "file": "fixtures/ads/ad-02-wrong-en.png",
+      "language": "en",
+      "panel": { "bbox": { "x": 90, "y": 840, "w": 900, "h": 170 }, "opaque": true, "radius": 28 },
+      "offer_lines": ["30% off everything", "+ free shipping · valid until 10.11"],
+      "offer_must_contain": ["30", "off", "everything", "10.11", "free", "shipping"],
+      "discount": { "percent": 30, "scope": "all" },
+      "shipping": "free",
+      "valid_until": "10.11",
+      "product_bbox": { "x": 440, "y": 210, "w": 200, "h": 558 },
+      "logo_bbox": { "x": 786, "y": 56, "w": 230, "h": 64 },
+      "tagline": { "text": "Thermal bottle · 750 ml", "bbox": { "x": 665, "y": 140, "w": 349, "h": 42 } },
+      "tagline_forbidden_in_offers": ["Thermal", "750"]
+    },
+    "ad-03-overlap-en": {
+      "file": "fixtures/ads/ad-03-overlap-en.png",
+      "language": "en",
+      "panel": {
+        "bbox": { "x": 150, "y": 470, "w": 780, "h": 190 },
+        "opaque": false,
+        "alpha": 0.92,
+        "radius": 28,
+        "note": "overlaps the product; semi-transparent so 'opaque' is a judgment call — informational only"
+      },
+      "offer_lines": ["30% off everything", "+ free shipping · until 10.11"],
+      "offer_must_contain": ["30", "off", "everything", "10.11", "free", "shipping"],
+      "discount": { "percent": 30, "scope": "all" },
+      "shipping": "free",
+      "valid_until": "10.11",
+      "product_bbox": { "x": 440, "y": 210, "w": 200, "h": 558 },
+      "logo_bbox": { "x": 786, "y": 56, "w": 230, "h": 64 },
+      "tagline": { "text": "Thermal bottle · 750 ml", "bbox": { "x": 665, "y": 140, "w": 349, "h": 42 } },
+      "tagline_forbidden_in_offers": ["Thermal", "750"]
     }
   }
 }

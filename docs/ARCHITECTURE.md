@@ -34,6 +34,7 @@ Sources: brainstorm with ChatGPT, Gemini and Instinct (2 rounds each, 29.10.2026
 | 6 | Gating = evidence coverage + deterministic rules. No self-reported confidence thresholds. | All three |
 | 7 | Graph API pinned to v25.0. Single-image Facebook link ad in a pre-made ad set. | All three |
 | 8 | Test set: 8 semantic cases (6 dev + 2 held-out, one authored blind by the teammate) + separate operational fault checks. | ChatGPT, Instinct (Gemini: 6) |
+| 10 | Languages: Hebrew + English ads (English twins of every fixture); all UI strings bilingual via `src/shared/i18n.ts` (code uses message keys); demo in English, scripts default to English with `--lang he`. | Oz |
 | 9 | Stretch only: Wonder/Spark computer-use "deep check" when offer terms are behind a click. | Gemini yes; ChatGPT, Instinct no → stretch |
 
 ## 2. Verified Meta facts (docs, 29.10.2026)

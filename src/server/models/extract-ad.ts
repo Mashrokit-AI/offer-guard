@@ -46,7 +46,8 @@ export function buildUserPrompt(width: number, height: number, jsonOnly: boolean
   return [
     `The image is ${width}x${height} pixels.`,
     'Report every bounding box as pixels in this image space: {"x","y","w","h"} with (x,y) the top-left corner of a half-open box.',
-    'offer_texts: every piece of promotional/offer text visible anywhere in the image (discounts, shipping terms, validity dates, offer-bound calls to action), transcribed verbatim exactly as printed, each with its pixel bbox and in_panel=true when the text sits inside the offer panel. Product descriptions, capacity info, and brand names are NOT offers — never list them under offer_texts.',
+    'language: the language of the printed offer text — "he" for Hebrew, "en" for English.',
+    'offer_texts: every piece of promotional/offer text visible anywhere in the image (discounts, shipping terms, validity dates, offer-bound calls to action), transcribed verbatim exactly as printed in whatever language is printed, each with its pixel bbox and in_panel=true when the text sits inside the offer panel. Product descriptions, capacity info, and brand names are NOT offers — never list them under offer_texts.',
     'discount: the advertised price reduction. percent is the number (or null when none is stated); scope is "all" when the offer covers everything, "selected_models" when it is limited to some products, "unspecified" when the coverage is unclear. verbatim is the exact printed discount phrase ("" when none).',
     'shipping: "free" only when free shipping is explicitly promised, "paid" when shipping is stated as paid/extra, otherwise "unspecified". verbatim is the exact printed shipping phrase ("" when none).',
     'valid_until: the offer expiry as DD.MM (or null), plus the exact printed date phrase as verbatim ("" when none).',
@@ -73,6 +74,7 @@ const BBOX_JSON_SCHEMA: Record<string, unknown> = {
 export const AD_CLAIMS_JSON_SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
+    language: { type: 'string', enum: ['he', 'en'] },
     offer_texts: {
       type: 'array',
       items: {
@@ -124,7 +126,7 @@ export const AD_CLAIMS_JSON_SCHEMA: Record<string, unknown> = {
     logo_bbox: { ...BBOX_JSON_SCHEMA, type: ['object', 'null'] },
     unreadable: { type: 'array', items: { type: 'string' } },
   },
-  required: ['offer_texts', 'discount', 'shipping', 'valid_until', 'panel', 'product_bbox', 'logo_bbox', 'unreadable'],
+  required: ['language', 'offer_texts', 'discount', 'shipping', 'valid_until', 'panel', 'product_bbox', 'logo_bbox', 'unreadable'],
   additionalProperties: false,
 };
 

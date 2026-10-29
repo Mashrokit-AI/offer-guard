@@ -11,6 +11,7 @@ export type GtBox = z.infer<typeof boxSchema>;
 
 const adGroundTruthSchema = z.object({
   file: z.string(),
+  language: z.enum(['he', 'en']),
   panel: z.object({
     bbox: boxSchema,
     opaque: z.boolean(),
