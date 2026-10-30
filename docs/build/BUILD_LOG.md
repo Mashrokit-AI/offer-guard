@@ -15,6 +15,7 @@ Times are Israel time (UTC+2).
 | 3 | Oct 29 | 20:01–20:26 | [03-model-killtests](prompts/03-model-killtests.md) | `d7f007d` | Spark 1.3 Hebrew extraction and SAM 3.1 protection masks, live kill tests |
 | — | Oct 29 | — | — | `77df8b6` | English twins of the synthetic GALI fixtures |
 | 4 | Oct 29 | 20:30–21:12 | [04-repair-and-english](prompts/04-repair-and-english.md) | `e1e28b3` | Panel snap, protected masks, Chromium panel render (Hebrew + English), zero-diff pixel proof, fresh Spark revalidation; `killtest:repair` passes on all 6 fixtures |
+| 5 | Oct 29–30 | 21:46–00:04, then one approval-gated command at 07:39 (the session waited overnight for a human approval) | [05-pages-capture-sweep](prompts/05-pages-capture-sweep.md) | `f9aa58f` | Landing pages (correct + wrong, with a visible prompt-injection line), guarded Playwright page capture, Spark page extraction with verified quotes, verdict rules in code, tool-call trace, SQLite store + cache, campaign sweep: 12/12 ads (6 cases × he/en) correct on a fresh run (32 model calls), 12/12 cache hits on the rerun; read-only campaign import and dry-run seed script (mocked tests) |
 
 Live model calls in these sessions were made against Meta Model API; the Graph API was only called by the day-1 probe, against our own agency ad account, creating PAUSED objects in a dedicated test ad set. All ads and landing pages are synthetic (fictional brand "GALI").
 
