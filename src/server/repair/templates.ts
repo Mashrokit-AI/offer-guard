@@ -1,6 +1,9 @@
 import type { AdLanguage } from '../../shared/schemas.js';
 import type { OfferSpec } from './spec.js';
 
+/** Bump when the panel copy templates change (cache key input). */
+export const PANEL_TEMPLATE_VERSION = 'panel-v1';
+
 export interface PanelCopy {
   main: string;
   sub: string;

@@ -13,6 +13,12 @@ const en = {
   verdict_clean: 'CLEAN',
   verdict_repaired: 'REPAIRED',
   verdict_refused: 'REFUSED',
+  verdict_ad_wrong_repairable: 'AD_WRONG_REPAIRABLE',
+  verdict_ad_wrong_unsafe: 'AD_WRONG_UNSAFE',
+  verdict_page_wrong: 'PAGE_WRONG',
+  verdict_ambiguous: 'AMBIGUOUS',
+  verdict_capture_failed: 'CAPTURE_FAILED',
+  verdict_unsupported_format: 'UNSUPPORTED_FORMAT',
 
   blocker_panel_not_opaque: 'Offer panel is not opaque (background shows through)',
   blocker_panel_overlaps_protected: 'Offer panel overlaps the protected product/logo area',
@@ -42,8 +48,41 @@ const en = {
   hdr_got: 'Got',
   hdr_result: 'Result',
   hdr_detail: 'Detail',
+  hdr_language: 'Lang',
+  hdr_cached: 'Cache',
+  hdr_latency: 'Latency',
+  hdr_calls: 'Calls',
   word_pass: 'PASS',
   word_fail: 'FAIL',
+  word_cached: 'cached',
+  word_fresh: 'fresh',
+
+  field_percent: 'discount percent',
+  field_scope: 'offer scope',
+  field_shipping: 'shipping terms',
+  field_valid_until: 'expiry date',
+  side_ad: 'the ad',
+  side_page: 'the landing page',
+
+  ambiguous_question: 'The {side} does not state a clear {field}. What value should the approved offer be checked against?',
+  finding_contradiction: '{side} says {observed} for {field}, but the approved offer says {spec}',
+  finding_missing: '{side} does not state {field}',
+  finding_page_wrong: 'landing page contradicts the approved offer ({detail})',
+  finding_repair_blocker: 'repair blocked: {blocker}',
+
+  capture_failed: 'page capture failed: {reason}',
+
+  sweep_title: 'Campaign sweep (snapshot → extract → capture → compare → verdict → repair)',
+  sweep_all_pass: 'SWEEP: ALL PASS',
+  sweep_failures: 'SWEEP: FAILURES PRESENT',
+  sweep_cache_hit: 'cache hit — reused results captured at {time}',
+  sweep_using_pages: 'landing pages: {base}',
+  sweep_using_db: 'store: {path}',
+
+  seed_title: 'Seed the real test campaign (one PAUSED ad per manifest entry)',
+  seed_dry_note: 'DRY RUN: payloads below are printed, not sent. A human runs with --execute.',
+  seed_done: 'Seed dry run complete. No writes were sent.',
+  seed_execute_done: 'Seed complete: {ads} PAUSED ads created and verified.',
 
   line_latency: 'latency: {ms} ms',
   line_model_calls: 'model calls: {count}',
@@ -65,6 +104,12 @@ const he: Record<MessageKey, string> = {
   verdict_clean: 'תקינה',
   verdict_repaired: 'תוקנה',
   verdict_refused: 'סורבה',
+  verdict_ad_wrong_repairable: 'מודעה שגויה — ניתנת לתיקון',
+  verdict_ad_wrong_unsafe: 'מודעה שגויה — מסוכן לתקן',
+  verdict_page_wrong: 'האתר שגוי',
+  verdict_ambiguous: 'לא ברור',
+  verdict_capture_failed: 'צילום האתר נכשל',
+  verdict_unsupported_format: 'פורמט לא נתמך',
 
   blocker_panel_not_opaque: 'פאנל המבצע אינו אטום (הרקע נראה מבעדו)',
   blocker_panel_overlaps_protected: 'פאנל המבצע חופף לאזור המוגן של המוצר/הלוגו',
@@ -94,8 +139,41 @@ const he: Record<MessageKey, string> = {
   hdr_got: 'התקבל',
   hdr_result: 'תוצאה',
   hdr_detail: 'פירוט',
+  hdr_language: 'שפה',
+  hdr_cached: 'מטמון',
+  hdr_latency: 'זמן',
+  hdr_calls: 'קריאות',
   word_pass: 'עבר',
   word_fail: 'נכשל',
+  word_cached: 'מהמטמון',
+  word_fresh: 'טרי',
+
+  field_percent: 'אחוז ההנחה',
+  field_scope: 'היקף המבצע',
+  field_shipping: 'תנאי המשלוח',
+  field_valid_until: 'תאריך התפוגה',
+  side_ad: 'מודעה',
+  side_page: 'עמוד הנחיתה',
+
+  ambiguous_question: 'ב{side} לא מופיע {field} ברור. מול איזה ערך מאושר יש לבדוק?',
+  finding_contradiction: 'ב{side} כתוב {observed} עבור {field}, אבל במבצע המאושר כתוב {spec}',
+  finding_missing: 'ב{side} לא מופיע {field}',
+  finding_page_wrong: 'עמוד הנחיתה סותר את המבצע המאושר ({detail})',
+  finding_repair_blocker: 'התיקון נחסם: {blocker}',
+
+  capture_failed: 'צילום העמוד נכשל: {reason}',
+
+  sweep_title: 'סריקת קמפיין (צילום → חילוץ → צילום אתר → השוואה → החלטה → תיקון)',
+  sweep_all_pass: 'סריקה: הכל עבר',
+  sweep_failures: 'סריקה: יש כשלונות',
+  sweep_cache_hit: 'נמצא במטמון — נעשה שימוש חוזר בתוצאות מ-{time}',
+  sweep_using_pages: 'עמודי נחיתה: {base}',
+  sweep_using_db: 'מסד נתונים: {path}',
+
+  seed_title: 'זריעת קמפיין הבדיקה האמיתי (מודעה מושהית אחת לכל רשומה)',
+  seed_dry_note: 'הרצת יבשה: המטענים מודפסים, לא נשלחים. אדם יריץ עם --execute.',
+  seed_done: 'הרצת הזריעה היבשה הסתיימה. דבר לא נשלח.',
+  seed_execute_done: 'הזריעה הסתיימה: {ads} מודעות מושהיות נוצרו ואומתו.',
 
   line_latency: 'זמן: {ms} מ״ש',
   line_model_calls: 'קריאות מודל: {count}',
@@ -115,7 +193,9 @@ export const STRINGS: Record<Lang, Record<MessageKey, string>> = { he, en };
 
 /** Render a message key in the requested language, filling {vars}. */
 export function t(lang: Lang, key: MessageKey, vars?: Record<string, string | number>): string {
-  let out: string = STRINGS[lang][key];
+  const found: string | undefined = STRINGS[lang][key];
+  if (found === undefined) throw new Error(`unknown message key: ${JSON.stringify(key)}`);
+  let out: string = found;
   if (vars) {
     for (const [name, value] of Object.entries(vars)) {
       out = out.split(`{${name}}`).join(String(value));

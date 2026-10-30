@@ -7,6 +7,17 @@ Design source of truth: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Status
 
+Campaign sweep backend live (Oct 29–30): `npm run sweep -- --manifest fixtures/campaign.json --fresh`
+checks all 12 demo ads (6 cases × he/en) end to end — snapshot → Spark ad
+extraction → Playwright page capture → Spark page extraction → code verdict →
+repair for AD_WRONG_REPAIRABLE — and stores snapshots, claims, findings,
+captures, repair artifacts and the tool-call trace in `data/offer-guard.db`.
+Fresh run: 12/12 PASS (32 model calls, ~115k tokens); second run: 12/12 cache
+hits, 0 model calls. `PAGE_WRONG` fires on the 25% page despite its prompt
+injection; `AMBIGUOUS` asks one focused question; repairs carry zero-diff
+pixel proof + passing revalidation. Graph API untouched (seed script is dry-run
+only until a human runs `--execute`).
+
 Day-1 model kill tests (Oct 29, live Model API calls, read-only; Graph API untouched).
 Both Hebrew and English ads are supported (6 fixtures); scripts print English
 by default, `--lang he` for Hebrew.
@@ -78,8 +89,14 @@ the only status ever sent is `PAUSED`; a timed-out POST is never retried blindly
 ## Tests
 
 ```sh
-npm test        # vitest: config, masking, PAUSED guard, repair units (snap, templates, bidi, proof, i18n)
+npm test        # vitest: config, masking, PAUSED guard, repair units, verdict rules,
+                # capture guard, quote verification, store/cache, campaign adapter (mocked)
 npm run typecheck
+npm run sweep -- --manifest fixtures/campaign.json --fresh  # live sweep (Model API, read-only)
+npm run sweep -- --manifest fixtures/campaign.json          # same, from cache (no model calls)
+npm run sweep -- --manifest fixtures/campaign.json --lang he  # same, Hebrew output
+npm run render:fixtures             # regenerate the 12 ad PNGs from fixtures/src/ad.html
+npm run seed:campaign               # dry run: payloads for one PAUSED ad per manifest entry
 npm run killtest:repair            # live repair proof on all 6 ads (Model API, read-only)
 npm run killtest:repair -- --lang he  # same, Hebrew output
 ```
@@ -91,9 +108,13 @@ loaded from local files at render time, never from the network.
 
 ## Layout
 
-`src/shared` (schemas, config, guards, i18n) · `src/server/meta|browser|workflow|models|repair` ·
-`src/web` · `scripts` (day-1 probes) · `fixtures/ads` (synthetic test ads, fictional brand) ·
-`tests` · `.local` (gitignored runtime journal + generated images).
+`src/shared` (schemas, config, guards, i18n, verdict) ·
+`src/server/meta|browser|workflow|models|repair|pages|store` · `src/web` ·
+`scripts` (probes, sweep, seed, fixture renderer) · `fixtures/ads` (synthetic
+test ads, fictional brand) · `fixtures/pages` (demo landing pages) ·
+`fixtures/campaign.json` (demo manifest) · `tests` (incl. `expected-verdicts.json`,
+local-only) · `data/` (gitignored SQLite store) · `.local` (gitignored runtime
+journal + generated images).
 
 ## How this was built
 

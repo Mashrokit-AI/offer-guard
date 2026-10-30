@@ -1,0 +1,91 @@
+{
+  "_note": "Demo campaign: synthetic GALI ads in both languages. {PAGES_BASE} is substituted at runtime from OFFER_GUARD_PAGES_BASE (default: the sweep's own local static server). ad-04 points at the wrong landing page; all other ads point at the correct page.",
+  "name": "GALI demo campaign (synthetic)",
+  "spec": "fixtures/ads/offer-spec.json",
+  "entries": [
+    {
+      "id": "ad-01",
+      "lang": "he",
+      "image": "fixtures/ads/ad-01-clean.png",
+      "copy": "בקבוק GALI החדש כבר כאן — עיצוב ישראלי, איכות ללא פשרות. לפרטים ולרכישה לחצו על הקישור.",
+      "landing_url": "{PAGES_BASE}/gali-offer-he.html"
+    },
+    {
+      "id": "ad-01",
+      "lang": "en",
+      "image": "fixtures/ads/ad-01-clean-en.png",
+      "copy": "The new GALI bottle is here — quality design, built to last. Tap the link for details and purchase.",
+      "landing_url": "{PAGES_BASE}/gali-offer-en.html"
+    },
+    {
+      "id": "ad-02",
+      "lang": "he",
+      "image": "fixtures/ads/ad-02-wrong.png",
+      "copy": "בקבוק GALI החדש כבר כאן — עיצוב ישראלי, איכות ללא פשרות. לפרטים ולרכישה לחצו על הקישור.",
+      "landing_url": "{PAGES_BASE}/gali-offer-he.html"
+    },
+    {
+      "id": "ad-02",
+      "lang": "en",
+      "image": "fixtures/ads/ad-02-wrong-en.png",
+      "copy": "The new GALI bottle is here — quality design, built to last. Tap the link for details and purchase.",
+      "landing_url": "{PAGES_BASE}/gali-offer-en.html"
+    },
+    {
+      "id": "ad-03",
+      "lang": "he",
+      "image": "fixtures/ads/ad-03-overlap.png",
+      "copy": "בקבוק GALI החדש כבר כאן — עיצוב ישראלי, איכות ללא פשרות. לפרטים ולרכישה לחצו על הקישור.",
+      "landing_url": "{PAGES_BASE}/gali-offer-he.html"
+    },
+    {
+      "id": "ad-03",
+      "lang": "en",
+      "image": "fixtures/ads/ad-03-overlap-en.png",
+      "copy": "The new GALI bottle is here — quality design, built to last. Tap the link for details and purchase.",
+      "landing_url": "{PAGES_BASE}/gali-offer-en.html"
+    },
+    {
+      "id": "ad-04",
+      "lang": "he",
+      "image": "fixtures/ads/ad-04-page-wrong.png",
+      "copy": "בקבוק GALI החדש כבר כאן — עיצוב ישראלי, איכות ללא פשרות. לפרטים ולרכישה לחצו על הקישור.",
+      "landing_url": "{PAGES_BASE}/gali-offer-wrong-he.html"
+    },
+    {
+      "id": "ad-04",
+      "lang": "en",
+      "image": "fixtures/ads/ad-04-page-wrong-en.png",
+      "copy": "The new GALI bottle is here — quality design, built to last. Tap the link for details and purchase.",
+      "landing_url": "{PAGES_BASE}/gali-offer-wrong-en.html"
+    },
+    {
+      "id": "ad-05",
+      "lang": "he",
+      "image": "fixtures/ads/ad-05-ambiguous.png",
+      "copy": "בקבוק GALI החדש כבר כאן — עיצוב ישראלי, איכות ללא פשרות. לפרטים ולרכישה לחצו על הקישור.",
+      "landing_url": "{PAGES_BASE}/gali-offer-he.html"
+    },
+    {
+      "id": "ad-05",
+      "lang": "en",
+      "image": "fixtures/ads/ad-05-ambiguous-en.png",
+      "copy": "The new GALI bottle is here — quality design, built to last. Tap the link for details and purchase.",
+      "landing_url": "{PAGES_BASE}/gali-offer-en.html"
+    },
+    {
+      "id": "ad-06",
+      "lang": "he",
+      "image": "fixtures/ads/ad-06-clean-phrasing.png",
+      "copy": "בקבוק GALI החדש כבר כאן — עיצוב ישראלי, איכות ללא פשרות. לפרטים ולרכישה לחצו על הקישור.",
+      "landing_url": "{PAGES_BASE}/gali-offer-he.html"
+    },
+    {
+      "id": "ad-06",
+      "lang": "en",
+      "image": "fixtures/ads/ad-06-clean-phrasing-en.png",
+      "copy": "The new GALI bottle is here — quality design, built to last. Tap the link for details and purchase.",
+      "landing_url": "{PAGES_BASE}/gali-offer-en.html"
+    }
+  ]
+}

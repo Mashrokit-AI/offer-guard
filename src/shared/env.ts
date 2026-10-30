@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Secrets (Meta access token, Model API key) live OUTSIDE the repo so that neither git nor a coding
@@ -14,4 +16,19 @@ export function secretsFilePath(env: NodeJS.ProcessEnv = process.env): string {
 export function loadEnvFiles(repoRoot: string): void {
   dotenv.config({ path: secretsFilePath(), quiet: true });
   dotenv.config({ path: join(repoRoot, '.env'), quiet: true });
+}
+
+/**
+ * Find the repo root (the dir holding package.json) by walking up from a
+ * module URL. Works both for tsx runs (scripts/foo.ts) and tsc-compiled runs
+ * (dist/scripts/foo.js), where `../..` arithmetic would differ.
+ */
+export function findRepoRoot(fromUrl: string | URL): string {
+  let dir = dirname(fileURLToPath(fromUrl));
+  for (;;) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) throw new Error('findRepoRoot: no package.json found walking up');
+    dir = parent;
+  }
 }

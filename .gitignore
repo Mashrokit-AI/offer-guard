@@ -1,5 +1,6 @@
 .env
 .local/
+data/
 node_modules/
 artifacts/
 *.log

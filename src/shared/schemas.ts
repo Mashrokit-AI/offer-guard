@@ -83,3 +83,25 @@ export const adClaimsSchema = z.object({
 });
 
 export type AdClaims = z.infer<typeof adClaimsSchema>;
+
+/** One verbatim quote from a landing page, tied to visible-text chunk ids. */
+export const pageQuoteSchema = z.object({
+  text: z.string(),
+  chunk_ids: z.array(z.string()),
+});
+
+export type PageQuote = z.infer<typeof pageQuoteSchema>;
+
+/**
+ * PageClaims: the same offer fields as AdClaims (minus geometry) plus quotes.
+ * Every quote must verify as a substring of the stored visible text —
+ * unverifiable quotes are dropped, never trusted.
+ */
+export const pageClaimsSchema = z.object({
+  discount: discountSchema,
+  shipping: shippingSchema,
+  valid_until: validUntilSchema,
+  quotes: z.array(pageQuoteSchema),
+});
+
+export type PageClaims = z.infer<typeof pageClaimsSchema>;
