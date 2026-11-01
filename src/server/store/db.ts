@@ -89,6 +89,15 @@ CREATE TABLE IF NOT EXISTS trace_event (
   next_state TEXT NOT NULL,
   cached INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS snapshot_source (
+  snapshot_id INTEGER PRIMARY KEY REFERENCES source_snapshot(id),
+  image_path TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS snapshot_evidence (
+  snapshot_id INTEGER PRIMARY KEY REFERENCES source_snapshot(id),
+  ad_json TEXT,
+  page_json TEXT
+);
 `;
 
 export interface SnapshotRow {
@@ -108,6 +117,70 @@ export interface SnapshotRow {
   cached: number;
   latency_ms: number;
   model_calls: number;
+}
+
+export interface RunRow {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  manifest_path: string;
+  fresh: number;
+  pages_base: string;
+  spec_version: number;
+}
+
+export interface SpecRow {
+  version: number;
+  spec_json: string;
+  created_at: string;
+}
+
+export interface CaptureRow {
+  requested_url: string;
+  final_url: string;
+  capture_time: string;
+  screenshot_paths: string;
+  chunks_json: string;
+}
+
+export interface ClaimRow {
+  source: string;
+  field: string;
+  normalized: string;
+  verbatim: string;
+  evidence_id: string;
+}
+
+export interface FindingRow {
+  kind: string;
+  side: string | null;
+  field: string | null;
+  spec_value: string | null;
+  observed_value: string | null;
+  evidence_ids_json: string;
+  detail: string;
+}
+
+export interface RepairRow {
+  before_sha256: string;
+  after_sha256: string;
+  digest: string;
+  proof_json: string;
+  revalidation_json: string;
+  artifact_dir: string;
+  created_at: string;
+}
+
+export interface TraceRow {
+  seq: number;
+  step: string;
+  tool_or_model: string;
+  input_summary: string;
+  output_summary: string;
+  duration_ms: number;
+  evidence_ids_json: string;
+  next_state: string;
+  cached: number;
 }
 
 export interface CachedCheck {
@@ -205,5 +278,100 @@ export class Store {
     this.db
       .prepare('INSERT INTO trace_event (snapshot_id, seq, step, tool_or_model, input_summary, output_summary, duration_ms, evidence_ids_json, next_state, cached) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run(t.snapshotId, t.seq, t.step, t.toolOrModel, t.inputSummary, t.outputSummary, t.durationMs, JSON.stringify(t.evidenceIds), t.nextState, t.cached ? 1 : 0);
+  }
+
+  insertSource(snapshotId: number, imagePath: string): void {
+    this.db
+      .prepare('INSERT INTO snapshot_source (snapshot_id, image_path) VALUES (?, ?) ON CONFLICT(snapshot_id) DO UPDATE SET image_path=excluded.image_path')
+      .run(snapshotId, imagePath);
+  }
+
+  copySource(fromSnapshotId: number, toSnapshotId: number): void {
+    this.db
+      .prepare('INSERT INTO snapshot_source (snapshot_id, image_path) SELECT ?, image_path FROM snapshot_source WHERE snapshot_id=?')
+      .run(toSnapshotId, fromSnapshotId);
+  }
+
+  getSource(snapshotId: number): string | null {
+    const row = this.db.prepare('SELECT image_path FROM snapshot_source WHERE snapshot_id=?').get(snapshotId) as { image_path: string } | undefined;
+    return row?.image_path ?? null;
+  }
+
+  insertEvidence(snapshotId: number, adJson: string | null, pageJson: string | null): void {
+    this.db
+      .prepare('INSERT INTO snapshot_evidence (snapshot_id, ad_json, page_json) VALUES (?, ?, ?) ON CONFLICT(snapshot_id) DO UPDATE SET ad_json=excluded.ad_json, page_json=excluded.page_json')
+      .run(snapshotId, adJson, pageJson);
+  }
+
+  copyEvidence(fromSnapshotId: number, toSnapshotId: number): void {
+    this.db
+      .prepare('INSERT INTO snapshot_evidence (snapshot_id, ad_json, page_json) SELECT ?, ad_json, page_json FROM snapshot_evidence WHERE snapshot_id=?')
+      .run(toSnapshotId, fromSnapshotId);
+  }
+
+  getEvidence(snapshotId: number): { adJson: string | null; pageJson: string | null } | null {
+    const row = this.db.prepare('SELECT ad_json, page_json FROM snapshot_evidence WHERE snapshot_id=?').get(snapshotId) as { ad_json: string | null; page_json: string | null } | undefined;
+    if (!row) return null;
+    return { adJson: row.ad_json, pageJson: row.page_json };
+  }
+
+  // --- read helpers for the web API ---
+
+  getRun(runId: number): RunRow | null {
+    return (this.db.prepare('SELECT * FROM campaign_run WHERE id=?').get(runId) as RunRow | undefined) ?? null;
+  }
+
+  latestRunForManifest(manifestPath: string): RunRow | null {
+    return (
+      (this.db.prepare('SELECT * FROM campaign_run WHERE manifest_path=? AND finished_at IS NOT NULL ORDER BY id DESC LIMIT 1').get(manifestPath) as RunRow | undefined) ?? null
+    );
+  }
+
+  getSnapshots(runId: number): SnapshotRow[] {
+    return this.db.prepare('SELECT * FROM source_snapshot WHERE run_id=? ORDER BY ad_key').all(runId) as SnapshotRow[];
+  }
+
+  getSnapshot(snapshotId: number): SnapshotRow | null {
+    return (this.db.prepare('SELECT * FROM source_snapshot WHERE id=?').get(snapshotId) as SnapshotRow | undefined) ?? null;
+  }
+
+  getSpec(version: number): SpecRow | null {
+    return (this.db.prepare('SELECT * FROM offer_spec WHERE version=?').get(version) as SpecRow | undefined) ?? null;
+  }
+
+  latestSpec(): SpecRow | null {
+    return (this.db.prepare('SELECT * FROM offer_spec ORDER BY version DESC LIMIT 1').get() as SpecRow | undefined) ?? null;
+  }
+
+  allSpecs(): SpecRow[] {
+    return this.db.prepare('SELECT * FROM offer_spec ORDER BY version').all() as SpecRow[];
+  }
+
+  getCapture(snapshotId: number): CaptureRow | null {
+    return (this.db.prepare('SELECT requested_url, final_url, capture_time, screenshot_paths, chunks_json FROM page_capture WHERE snapshot_id=?').get(snapshotId) as CaptureRow | undefined) ?? null;
+  }
+
+  getClaims(snapshotId: number): ClaimRow[] {
+    return this.db.prepare('SELECT source, field, normalized, verbatim, evidence_id FROM claim WHERE snapshot_id=? ORDER BY id').all(snapshotId) as ClaimRow[];
+  }
+
+  getFindings(snapshotId: number): FindingRow[] {
+    return this.db.prepare('SELECT kind, side, field, spec_value, observed_value, evidence_ids_json, detail FROM finding WHERE snapshot_id=? ORDER BY id').all(snapshotId) as FindingRow[];
+  }
+
+  getRepair(snapshotId: number): RepairRow | null {
+    return (this.db.prepare('SELECT before_sha256, after_sha256, digest, proof_json, revalidation_json, artifact_dir, created_at FROM repair_artifact WHERE snapshot_id=?').get(snapshotId) as RepairRow | undefined) ?? null;
+  }
+
+  getTrace(snapshotId: number): TraceRow[] {
+    return this.db.prepare('SELECT seq, step, tool_or_model, input_summary, output_summary, duration_ms, evidence_ids_json, next_state, cached FROM trace_event WHERE snapshot_id=? ORDER BY seq').all(snapshotId) as TraceRow[];
+  }
+
+  /** Sum of model_calls for snapshots of runs started at/after `sinceIso`. */
+  countModelCallsSince(sinceIso: string): number {
+    const row = this.db
+      .prepare('SELECT COALESCE(SUM(s.model_calls), 0) AS total FROM source_snapshot s JOIN campaign_run r ON s.run_id=r.id WHERE r.started_at >= ?')
+      .get(sinceIso) as { total: number };
+    return row.total;
   }
 }

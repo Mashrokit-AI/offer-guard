@@ -160,9 +160,10 @@ offer-guard/                 (new public repo, only new code)
   src/server/workflow/       job state machine, retries, approvals, journal
   src/server/models/         Spark / Wonder / SAM adapters + prompts
   src/server/repair/         masks, Chromium panel renderer, Sharp composite, pixel proof
-  src/web/                   sweep view, evidence view, repair diff, approve, trace
+  src/server/http/           Hono web app: read API, media-by-id, SSE jobs, uploads (see §17)
+  src/web/                   no-framework TS UI (esbuild bundle), bilingual EN/HE (see §17)
   fixtures/                  synthetic ads + demo landing pages (public)
-  tests/                     verdict rules, renderer, pixel proof, workflow
+  tests/                     verdict rules, renderer, pixel proof, workflow, web API
 ```
 Secrets (Meta token, Model API key) server-side only, never in repo or traces. Runtime artifacts gitignored.
 
@@ -249,3 +250,27 @@ English narration/subtitles; Hebrew stays visible. Label any cached or sped-up p
 ## 16. Stretch (only if everything above works by Monday evening)
 
 Bounded "deep check": when the page says "selected products" or "see terms" and the facts are behind a click, run a short computer-use loop (Spark 1.3 or Wonder, `tools:[{type:"computer"}]`, Playwright driver, max ~8 steps, allowlisted domain, safety checks surfaced) and feed the revealed text back as evidence. This makes the agent's behaviour more visible in the video, but it is not needed for the core.
+
+## 17. Web app (as built, Oct 31 — overrides §1 decision 2's Express/React)
+
+Hono + `@hono/node-server` (`src/server/http/`, `createApp(deps)` factory for
+in-process tests), 127.0.0.1:`OFFER_GUARD_PORT` (3023), all routes under
+`OFFER_GUARD_BASE_PATH` (`/`; `/offer-guard/` behind nginx in production).
+No-framework TypeScript UI (`src/web/`, esbuild → `dist/web/`), one CSS file,
+bundled Noto Sans + Noto Sans Hebrew, no CDN. All UI strings bilingual via
+`src/shared/i18n.ts` (keys + vars over the wire, never English text).
+
+- Read API: `GET /api/campaign` (spec + latest finished run + per-ad rows),
+  `GET /api/ads/:id` (evidence, comparison, findings, verdict, question,
+  repair/refusal, trace), `GET /api/runs/:id/trace`.
+- Media by record id (`/media/:kind/:id`, realpath containment), thumbnails
+  and diff heatmaps generated once into `artifacts/web-cache/`; demo pages at
+  `/pages/`; errors are `{error: <i18n key>}`.
+- Live jobs: fresh sweep + own-ad check, one at a time, queue ≤ 3, per-IP
+  3/hour, daily model-call cap in SQLite, `OFFER_GUARD_LIVE=off` kill switch,
+  SSE progress with polling fallback. Own-ad uploads re-encoded via sharp
+  (JPEG/PNG by content, ≤5 MB, ≤12 MP) under `data/uploads/`, deleted after 24 h.
+- Publishing stays out: the PAUSED button is disabled ("owner only").
+- Additive backend hooks (no rewrites): `snapshot_source` + `snapshot_evidence`
+  tables, SAM masks persisted to the repair dir, `expectedPath` nullable for
+  ad-hoc checks.

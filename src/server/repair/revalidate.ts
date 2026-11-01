@@ -10,6 +10,13 @@ export interface RevalidationCheck {
 export interface Revalidation {
   pass: boolean;
   checks: RevalidationCheck[];
+  /** Normalized fields of the fresh Spark extraction (set by the caller). */
+  claims?: {
+    percent: number | null;
+    scope: string;
+    shipping: string;
+    valid: string | null;
+  };
 }
 
 const SCOPE_WORDS: Record<string, string[]> = {

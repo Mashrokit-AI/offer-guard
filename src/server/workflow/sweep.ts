@@ -89,7 +89,8 @@ function safeKey(key: string): string {
 export interface SweepOptions {
   repoRoot: string;
   manifestPath: string;
-  expectedPath: string;
+  /** Null = no expected verdicts (single ad-hoc checks); pass is then verdict !== 'ERROR'. */
+  expectedPath: string | null;
   fresh: boolean;
   lang: Lang;
   client: OpenAI;
@@ -195,8 +196,9 @@ function insertTraceRows(store: Store, snapshotId: number, trace: TraceCollector
 async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: string): Promise<SweepRow> {
   const { options, store } = ctx;
   const key = adKey(entry);
-  const expected = ctx.expected[key];
-  if (!expected) throw new Error(`no expected verdict for ${key} in ${options.expectedPath}`);
+  const want = ctx.expected[key] as Verdict | undefined;
+  const wantLabel = want ?? '';
+  const passOf = (verdict: string): boolean => (want ? verdict === want : verdict !== 'ERROR');
   const started = Date.now();
   let modelCalls = 0;
 
@@ -237,12 +239,14 @@ async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: strin
         capture_time: new Date().toISOString(),
         original_capture_time: hit.snapshot.capture_time,
         verdict: hit.snapshot.verdict,
-        expected,
-        pass: hit.snapshot.verdict === expected ? 1 : 0,
+        expected: wantLabel,
+        pass: passOf(hit.snapshot.verdict) ? 1 : 0,
         cached: 1,
         latency_ms: Date.now() - started,
         model_calls: 0,
       });
+      store.copySource(hit.snapshot.id, snapshotId);
+      store.copyEvidence(hit.snapshot.id, snapshotId);
       if (hit.capture) {
         store.insertCapture({
           snapshotId,
@@ -277,8 +281,8 @@ async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: strin
       }
       insertTraceRows(store, snapshotId, trace);
       const row: SweepRow = {
-        ad: entry.id, lang: entry.lang, expected, got: hit.snapshot.verdict,
-        pass: hit.snapshot.verdict === expected, cached: true,
+        ad: entry.id, lang: entry.lang, expected: wantLabel, got: hit.snapshot.verdict,
+        pass: passOf(hit.snapshot.verdict), cached: true,
         latencyMs: Date.now() - started, modelCalls: 0,
       };
       options.onRow?.(row);
@@ -352,15 +356,17 @@ async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: strin
       const snapshotId = store.insertSnapshot({
         run_id: ctx.runId, ad_key: key, image_sha256: sha256Hex(imageBytes), image_bytes: imageBytes.length,
         copy: entry.copy, landing_url: landingUrl, cache_key: cacheKey, capture_time: new Date().toISOString(),
-        original_capture_time: null, verdict: out.verdict, expected,
-        pass: out.verdict === expected ? 1 : 0, cached: 0,
+        original_capture_time: null, verdict: out.verdict, expected: wantLabel,
+        pass: passOf(out.verdict) ? 1 : 0, cached: 0,
         latency_ms: Date.now() - started, model_calls: modelCalls,
       });
+      store.insertSource(snapshotId, entry.image);
+      store.insertEvidence(snapshotId, JSON.stringify(ad), null);
       insertClaimRows(store, snapshotId, ad, null);
       insertTraceRows(store, snapshotId, trace);
       const row: SweepRow = {
-        ad: entry.id, lang: entry.lang, expected, got: out.verdict,
-        pass: out.verdict === expected, cached: false,
+        ad: entry.id, lang: entry.lang, expected: wantLabel, got: out.verdict,
+        pass: passOf(out.verdict), cached: false,
         latencyMs: Date.now() - started, modelCalls,
       };
       options.onRow?.(row);
@@ -478,10 +484,12 @@ async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: strin
     const snapshotId = store.insertSnapshot({
       run_id: ctx.runId, ad_key: key, image_sha256: sha256Hex(imageBytes), image_bytes: imageBytes.length,
       copy: entry.copy, landing_url: landingUrl, cache_key: cacheKey, capture_time: capture.captureTime,
-      original_capture_time: null, verdict: finalVerdict, expected,
-      pass: finalVerdict === expected ? 1 : 0, cached: 0,
+      original_capture_time: null, verdict: finalVerdict, expected: wantLabel,
+      pass: passOf(finalVerdict) ? 1 : 0, cached: 0,
       latency_ms: Date.now() - started, model_calls: modelCalls,
     });
+    store.insertSource(snapshotId, entry.image);
+    store.insertEvidence(snapshotId, JSON.stringify(ad), JSON.stringify(page));
     store.insertCapture({
       snapshotId,
       requestedUrl: capture.requestedUrl,
@@ -518,8 +526,8 @@ async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: strin
     insertTraceRows(store, snapshotId, trace);
 
     const row: SweepRow = {
-      ad: entry.id, lang: entry.lang, expected, got: finalVerdict,
-      pass: finalVerdict === expected, cached: false,
+      ad: entry.id, lang: entry.lang, expected: wantLabel, got: finalVerdict,
+      pass: passOf(finalVerdict), cached: false,
       latencyMs: Date.now() - started, modelCalls,
     };
     options.onRow?.(row);
@@ -541,12 +549,13 @@ async function checkAd(ctx: CheckContext, entry: ManifestEntry, pagesBase: strin
     const snapshotId = store.insertSnapshot({
       run_id: ctx.runId, ad_key: key, image_sha256: sha256Hex(imageBytes), image_bytes: imageBytes.length,
       copy: entry.copy, landing_url: landingUrl, cache_key: cacheKey, capture_time: new Date().toISOString(),
-      original_capture_time: null, verdict: 'ERROR', expected, pass: 0, cached: 0,
+      original_capture_time: null, verdict: 'ERROR', expected: wantLabel, pass: 0, cached: 0,
       latency_ms: Date.now() - started, model_calls: modelCalls,
     });
+    store.insertSource(snapshotId, entry.image);
     insertTraceRows(store, snapshotId, trace);
     const row: SweepRow = {
-      ad: entry.id, lang: entry.lang, expected, got: `ERROR: ${detail.slice(0, 120)}`,
+      ad: entry.id, lang: entry.lang, expected: wantLabel, got: `ERROR: ${detail.slice(0, 120)}`,
       pass: false, cached: false, latencyMs: Date.now() - started, modelCalls,
     };
     options.onRow?.(row);
@@ -584,9 +593,11 @@ export async function runSweep(options: SweepOptions): Promise<SweepReport> {
   const manifest = await loadManifest(options.manifestPath);
   const specJson = await readFile(resolve(options.repoRoot, manifest.spec), 'utf8');
   const spec = loadOfferSpec(JSON.parse(specJson));
-  const expected = await loadExpectedVerdicts(options.expectedPath);
-  for (const e of manifest.entries) {
-    if (!expected[adKey(e)]) throw new Error(`no expected verdict for ${adKey(e)} in ${options.expectedPath}`);
+  const expected = options.expectedPath ? await loadExpectedVerdicts(options.expectedPath) : {};
+  if (options.expectedPath) {
+    for (const e of manifest.entries) {
+      if (!expected[adKey(e)]) throw new Error(`no expected verdict for ${adKey(e)} in ${options.expectedPath}`);
+    }
   }
 
   const store = Store.open(options.dbPath);

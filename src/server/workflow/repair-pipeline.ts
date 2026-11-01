@@ -1,6 +1,7 @@
 import type OpenAI from 'openai';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import sharp from 'sharp';
 import type { AdClaims } from '../../shared/schemas.js';
 import { countMaskInRect } from '../../shared/geometry.js';
 import type { ModelUsage } from '../models/client.js';
@@ -96,6 +97,16 @@ export async function runRepairPipeline(input: RepairPipelineInput): Promise<Rep
   });
   modelCalls += protection.calls;
   blockers.push(...protection.blockers);
+  // Persist the SAM masks (even on refusal) so the UI can show the overlay
+  // without re-running SAM. Grayscale PNGs: 255 = masked pixel.
+  await writeFile(join(artifactDir, 'masks.json'), JSON.stringify({ width: before.width, height: before.height, labels: protection.labels }, null, 2) + '\n');
+  for (const [name, mask] of [['mask-product.png', protection.product], ['mask-logo.png', protection.logo], ['mask-protected.png', protection.protected]] as const) {
+    const px = Buffer.alloc(before.width * before.height);
+    for (let i = 0; i < px.length; i++) px[i] = mask[i] ? 255 : 0;
+    await sharp(px, { raw: { width: before.width, height: before.height, channels: 1 } })
+      .png()
+      .toFile(join(artifactDir, name));
+  }
   let overlapPx = -1;
   if (snap) {
     overlapPx = countMaskInRect(protection.protected, before.width, before.height, snap.rect);
@@ -205,6 +216,12 @@ export async function runRepairPipeline(input: RepairPipelineInput): Promise<Rep
     modelCalls += rextracted.attempts.length;
     for (const a of rextracted.attempts) usages.push(a.usage);
     revalidation = revalidate(claims, rextracted.claims, spec);
+    revalidation.claims = {
+      percent: rextracted.claims.discount.percent,
+      scope: rextracted.claims.discount.scope,
+      shipping: rextracted.claims.shipping.terms,
+      valid: rextracted.claims.valid_until.day_month,
+    };
   } catch (err) {
     if (err instanceof ExtractError) {
       modelCalls += err.attempts.length;

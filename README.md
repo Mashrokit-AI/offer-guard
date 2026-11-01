@@ -51,6 +51,33 @@ by default, `--lang he` for Hebrew.
   repair pipeline protects both (union of the phrase mask and a box prompt on
   Spark's `logo_bbox`).
 
+## Web app (the demo judges open)
+
+```sh
+npm run web       # build the UI bundle + serve on http://127.0.0.1:3023/
+npm run web:dev   # same, rebuilding the bundle on change
+```
+
+Campaign home with the approved offer, five verdict counters, the ad grid with
+saved/fresh labels, one "Run fresh analysis" button (live progress per ad),
+per-ad evidence (spec · ad quotes with crops · page quotes with highlighted
+captures), before/after slider with SAM-mask and heatmap overlays plus the
+three proof numbers, refusal/page/ambiguous views, the recorded tool-call
+trace, a bounded "Check your own ad" page, and an About page. Everything is
+bilingual (English default, Hebrew toggle, RTL when Hebrew); no framework, no
+CDN — fonts and bundle are served by our own server.
+
+Public vs owner-only: everything in the web app is read-only except two
+bounded live actions (fresh sweep, own-ad check — one at a time, per-IP and
+daily caps, kill switch `OFFER_GUARD_LIVE=off`). Publishing a PAUSED
+replacement ad is owner-only and not in this app — the button is present but
+disabled ("owner only — signed-in view").
+
+Env (see `.env.example`, no secrets there): `OFFER_GUARD_PORT` (default 3023),
+`OFFER_GUARD_BASE_PATH` (default `/`; production `/offer-guard/` behind nginx),
+`OFFER_GUARD_LIVE=on|off`, `OFFER_GUARD_TRUST_PROXY=0|1`,
+`OFFER_GUARD_DAILY_MODEL_CALLS` (default 300).
+
 ## Day-1 probe
 
 Proves the Meta write path on our own account: upload a test image, create a
@@ -90,7 +117,8 @@ the only status ever sent is `PAUSED`; a timed-out POST is never retried blindly
 
 ```sh
 npm test        # vitest: config, masking, PAUSED guard, repair units, verdict rules,
-                # capture guard, quote verification, store/cache, campaign adapter (mocked)
+                # capture guard, quote verification, store/cache, campaign adapter (mocked),
+                # web API + media + upload + rate-limit + i18n-parity tests (in-process)
 npm run typecheck
 npm run sweep -- --manifest fixtures/campaign.json --fresh  # live sweep (Model API, read-only)
 npm run sweep -- --manifest fixtures/campaign.json          # same, from cache (no model calls)
@@ -109,12 +137,15 @@ loaded from local files at render time, never from the network.
 ## Layout
 
 `src/shared` (schemas, config, guards, i18n, verdict) ·
-`src/server/meta|browser|workflow|models|repair|pages|store` · `src/web` ·
-`scripts` (probes, sweep, seed, fixture renderer) · `fixtures/ads` (synthetic
-test ads, fictional brand) · `fixtures/pages` (demo landing pages) ·
+`src/server/meta|browser|workflow|models|repair|pages|store` ·
+`src/server/http` (Hono app: read API, media, jobs, uploads) ·
+`src/web` (no-framework TS UI, esbuild bundle) ·
+`scripts` (probes, sweep, seed, fixture renderer, web build, UI screenshots) ·
+`fixtures/ads` (synthetic test ads, fictional brand) ·
+`fixtures/pages` (demo landing pages) ·
 `fixtures/campaign.json` (demo manifest) · `tests` (incl. `expected-verdicts.json`,
-local-only) · `data/` (gitignored SQLite store) · `.local` (gitignored runtime
-journal + generated images).
+local-only) · `data/` (gitignored SQLite store + uploads) · `.local` (gitignored
+runtime journal + generated images) · `artifacts/ui` (gitignored UI screenshots).
 
 ## How this was built
 
