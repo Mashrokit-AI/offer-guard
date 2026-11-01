@@ -115,6 +115,44 @@ export function modeBadge(lang: Lang, mode: string): HTMLElement {
   return h('span', { class: 'chip' }, t(lang, mode === 'fast' ? 'mode_badge_fast' : 'mode_badge_protected'));
 }
 
+/** Compact duration: `389ms`, `12.4s`. Same value as the trace, shorter unit. */
+export function fmtDur(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+/** One-line model footer for an output card: ids from the trace + duration. */
+export function modelFooter(models: string[], ms: number): HTMLElement {
+  const bits = [...models, fmtDur(ms)];
+  return h('div', { class: 'model-footer', dir: 'ltr' }, bits.join(' · '));
+}
+
+export type Orientation = 'square' | 'landscape' | 'vertical';
+
+/** Orientation group for a preset (unknown presets read as square). */
+export function orientationOf(presets: Array<{ id: string; width: number; height: number }>, id: string): Orientation {
+  const p = presets.find((x) => x.id === id);
+  if (!p || p.width <= 0 || p.height <= 0) return 'square';
+  if (p.height / p.width >= 1.5) return 'vertical';
+  if (p.width / p.height > 1.05) return 'landscape';
+  return 'square';
+}
+
+/** Group cards by orientation so mixed sizes look intentional. */
+export function groupByOrientation<T>(presets: Array<{ id: string; width: number; height: number }>, items: T[], presetOf: (item: T) => string): Array<{ key: Orientation; items: T[] }> {
+  const groups: Array<{ key: Orientation; items: T[] }> = [
+    { key: 'square', items: [] },
+    { key: 'landscape', items: [] },
+    { key: 'vertical', items: [] },
+  ];
+  for (const item of items) {
+    const g = groups.find((x) => x.key === orientationOf(presets, presetOf(item)));
+    g?.items.push(item);
+  }
+  return groups.filter((g) => g.items.length > 0);
+}
+
 export interface Bbox {
   x: number;
   y: number;

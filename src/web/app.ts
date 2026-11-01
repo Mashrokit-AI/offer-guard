@@ -50,21 +50,26 @@ function render(): void {
   const [path] = raw.split('?');
   let route = 'home';
   let main: HTMLElement;
+  let anchor: string | null = null;
   const outMatch = (path ?? '').match(/^\/output\/(\d+)$/);
+  const aboutMatch = (path ?? '').match(/^\/about(?:\/([\w-]+))?$/);
   if (outMatch) {
     route = 'output';
     main = outputView(lang, Number(outMatch[1]));
   } else if (path === '/brands') {
     route = 'brands';
     main = brandsView(lang);
-  } else if (path === '/about') {
+  } else if (aboutMatch) {
     route = 'about';
     main = aboutView(lang);
+    anchor = aboutMatch[1] ?? null;
   } else {
     main = homeView(lang);
   }
   mount.replaceChildren(shell(lang, main, route));
-  window.scrollTo(0, 0);
+  const target = anchor ? document.getElementById(anchor) : null;
+  if (target) target.scrollIntoView({ block: 'center' });
+  else window.scrollTo(0, 0);
 }
 
 window.addEventListener('hashchange', render);

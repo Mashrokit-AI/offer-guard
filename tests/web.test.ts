@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEMO_JOB_ID } from '../src/server/adfit/seed.js';
 import { dims } from '../src/web/lib.js';
+import { traceSummary } from '../src/server/http/dto.js';
 import { createApp } from '../src/server/http/app.js';
 import type { HttpConfig } from '../src/server/http/config.js';
 import { Store } from '../src/server/store/db.js';
@@ -428,6 +429,26 @@ describe('live-job guards', () => {
     const bytes = Buffer.from(await zip.arrayBuffer());
     expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK');
     expect((await app.request('/api/runs/nope/zip')).status).toBe(404);
+  });
+});
+
+describe('traceSummary', () => {
+  it('lists distinct model ids in order and sums durations', () => {
+    const trace = JSON.stringify([
+      { tool_or_model: 'model:muse-spark-1.3', duration_ms: 14820 },
+      { tool_or_model: 'model:sam-3.1', duration_ms: 8115 },
+      { tool_or_model: 'code:planLayout', duration_ms: 0 },
+      { tool_or_model: 'model:muse-image-1.0', duration_ms: 14843 },
+      { tool_or_model: 'model:muse-spark-1.3', duration_ms: 9100 },
+    ]);
+    expect(traceSummary(trace)).toEqual({ models: ['muse-spark-1.3', 'sam-3.1', 'muse-image-1.0'], traceMs: 46878 });
+  });
+
+  it('never throws on missing or corrupt traces', () => {
+    expect(traceSummary(null)).toEqual({ models: [], traceMs: 0 });
+    expect(traceSummary('[]')).toEqual({ models: [], traceMs: 0 });
+    expect(traceSummary('nope')).toEqual({ models: [], traceMs: 0 });
+    expect(traceSummary('{"a":1}')).toEqual({ models: [], traceMs: 0 });
   });
 });
 

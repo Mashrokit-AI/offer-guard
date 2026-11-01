@@ -331,7 +331,29 @@ img { max-width: 100%; }
   color: var(--ink);
 }
 .ad-card:hover { border-color: var(--accent); }
-.ad-card img.thumb { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #d8dcd9; }
+/* True-aspect frame: sized to the preset ratio, image never cropped. */
+.thumb-frame {
+  background-color: #ecefec;
+  background-image: conic-gradient(#dbe1dc 0 25%, transparent 0 50%, #dbe1dc 0 75%, transparent 0);
+  background-size: 18px 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thumb-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.thumb-frame.natural img { height: auto; }
+.thumb-failed {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--red-fg);
+  font-weight: 700;
+  text-align: center;
+}
+.model-footer { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .ad-card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
 .ad-card-reason { font-size: 14px; line-height: 1.45; }
 .ad-card-meta {
@@ -569,7 +591,7 @@ table.trace td.io { overflow-wrap: anywhere; max-width: 340px; }
 /* --- about --- */
 .about-list { margin: 8px 0 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 8px; }
 .about-list li::marker { color: var(--accent); font-weight: 700; }
-.model-tag { font-family: var(--mono); font-size: 13px; background: var(--slate-bg); border-radius: 6px; padding: 1px 8px; }
+.model-tag { font-family: var(--mono); font-size: 13px; background: var(--slate-bg); border-radius: 6px; padding: 1px 8px; white-space: nowrap; }
 
 /* --- footer --- */
 .footer {
@@ -609,7 +631,7 @@ table.trace td.io { overflow-wrap: anywhere; max-width: 340px; }
   .nav a { padding: 7px 9px; font-size: 14px; }
 }
 
-/* --- AdFit: upload --- */
+/* --- MatchPic: upload --- */
 .drop {
   border: 2px dashed var(--line);
   border-radius: var(--radius);
@@ -627,7 +649,7 @@ table.trace td.io { overflow-wrap: anywhere; max-width: 340px; }
 .input.small { font-size: 13.5px; padding: 6px 10px; }
 .small { font-size: 13px; }
 
-/* --- AdFit: size chips --- */
+/* --- MatchPic: size chips --- */
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chipbtn {
   font: inherit;
@@ -643,7 +665,7 @@ table.trace td.io { overflow-wrap: anywhere; max-width: 340px; }
 .chipbtn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .card-badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-/* --- AdFit: before/after --- */
+/* --- MatchPic: before/after --- */
 .evidence2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; align-items: start; }
 .toggles { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 14.5px; font-weight: 500; }
 .toggles label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
@@ -657,7 +679,7 @@ img.masklayer, canvas.masklayer { position: absolute; inset: 0; width: 100%; hei
 .box.safe { border-color: #30b0c7; border-style: dashed; }
 .box.drag { cursor: move; touch-action: none; }
 
-/* --- AdFit: brands --- */
+/* --- MatchPic: brands --- */
 .brand-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .brand-logo { height: 40px; width: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .swatch { display: inline-block; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line); }
@@ -669,4 +691,44 @@ img.masklayer, canvas.masklayer { position: absolute; inset: 0; width: 100%; hei
 @media (max-width: 900px) {
   .evidence2 { grid-template-columns: 1fr; }
   .formrow { grid-template-columns: 1fr; }
+}
+
+/* --- MatchPic: grouped result grids --- */
+.group-title { font-size: 15px; margin: 20px 0 0; color: var(--muted); font-weight: 700; }
+.group-title + .grid { margin-top: 8px; }
+.grid.cols-landscape { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.grid.cols-vertical { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+/* --- MatchPic: demo-first home --- */
+.demo-sec { margin-top: 18px; }
+.demo-source { max-width: 280px; margin-bottom: 4px; }
+.models-row {
+  display: flex;
+  gap: 6px 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.models-row + .card { margin-top: 14px; }
+.models-title { font-size: 14px; white-space: nowrap; }
+.models-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.model-chip {
+  font-size: 13.5px;
+  text-decoration: none;
+  background: var(--slate-bg);
+  color: var(--ink);
+  border-radius: 20px;
+  padding: 4px 14px;
+}
+.model-chip:hover { background: var(--green-bg); text-decoration: none; }
+.try-title { margin-top: 0; }
+.gen-hint { color: var(--muted); font-size: 14px; }
+
+@media (max-width: 560px) {
+  .grid.cols-vertical { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .grid.cols-landscape { grid-template-columns: 1fr; }
+  .demo-source { max-width: 220px; }
+  .model-footer { font-size: 11px; }
 }

@@ -150,6 +150,18 @@ html,body{margin:0;padding:0;width:${input.width}px;height:${input.height}px;}
 </html>`;
 }
 
+/**
+ * Chromium for text rendering. Sandboxed shells (no Mach bootstrap on macOS)
+ * cannot launch the default multi-process browser; RENDER_SINGLE_PROCESS=1
+ * falls back to one process.
+ */
+async function launchRenderBrowser() {
+  if (process.env.RENDER_SINGLE_PROCESS === '1') {
+    return chromium.launch({ args: ['--single-process', '--no-sandbox', '--disable-gpu'] });
+  }
+  return chromium.launch();
+}
+
 async function panelOverflows(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const el = document.querySelector('.panel');
@@ -171,7 +183,7 @@ export async function renderPanel(input: RenderInput): Promise<RenderResult> {
   const main0 = Math.round(input.height * 0.4);
   const sub0 = Math.round(input.height * 0.2);
 
-  const browser = await chromium.launch();
+  const browser = await launchRenderBrowser();
   try {
     const page = await browser.newPage({
       viewport: { width: input.width, height: input.height },
@@ -288,7 +300,7 @@ async function blockOverflows(page: Page): Promise<boolean> {
 export async function renderTextBlock(input: TextBlockInput): Promise<TextBlockResult> {
   const fontCss = await loadFontCss();
   const stack = fontStackFor(input.lang);
-  const browser = await chromium.launch();
+  const browser = await launchRenderBrowser();
   try {
     const page = await browser.newPage({
       viewport: { width: input.width, height: input.height },

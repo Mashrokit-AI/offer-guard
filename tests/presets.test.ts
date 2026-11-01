@@ -22,16 +22,16 @@ describe('preset table', () => {
     }
   });
 
-  it('keeps top/bottom 14% clear on 9:16 for UI overlays', () => {
+  it('keeps top 14% / bottom 20% clear on 9:16 for UI overlays', () => {
     for (const id of ['ig-story-916', 'tiktok-916']) {
       const p = presetById(id);
       expect(p?.safe.top).toBe(0.14);
-      expect(p?.safe.bottom).toBe(0.14);
+      expect(p?.safe.bottom).toBe(0.2);
     }
     const story = presetById('ig-story-916');
     const safe = presetSafeRect(story!);
     expect(safe.y).toBe(Math.round(1920 * 0.14));
-    expect(safe.h).toBe(1920 - 2 * Math.round(1920 * 0.14));
+    expect(safe.h).toBe(1920 - Math.round(1920 * 0.14) - Math.round(1920 * 0.2));
   });
 
   it('resolves the Meta shortcut to the 5 Meta placements', () => {

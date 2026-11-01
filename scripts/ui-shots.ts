@@ -89,7 +89,12 @@ async function main(): Promise<void> {
   if (!firstOutput) throw new Error('demo job has no outputs — run the live batch first');
   console.log(`ui-shots: demo output #${firstOutput.id} (${firstOutput.preset}, ${firstOutput.mode})`);
 
-  const browser: Browser = await chromium.launch();
+  // Sandboxed shells (no Mach bootstrap on macOS) cannot launch the default
+  // multi-process browser; UI_SHOTS_SINGLE_PROCESS=1 falls back to one process.
+  const SINGLE = process.env.UI_SHOTS_SINGLE_PROCESS === '1';
+  const launchBrowser = (): Promise<Browser> =>
+    chromium.launch(SINGLE ? { args: ['--single-process', '--no-sandbox', '--disable-gpu'] } : undefined);
+  let browser: Browser = await launchBrowser();
   try {
     for (const lang of LANGS) {
       for (const vp of VIEWPORTS) {
@@ -111,7 +116,8 @@ async function main(): Promise<void> {
             name: 'trace',
             hash: `#/output/${firstOutput.id}`,
             setup: async (p) => {
-              await p.click('#trace summary');
+              // The drawer opens by itself on desktop; only click when closed.
+              if ((await p.locator('#trace[open]').count()) === 0) await p.click('#trace summary');
               await p.waitForTimeout(400);
               await p.locator('#trace').scrollIntoViewIfNeeded();
             },
@@ -121,7 +127,14 @@ async function main(): Promise<void> {
         ];
         for (const s of shots) {
           const shotName = `${s.name}-${lang}-${vp.name}`;
-          const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
+          let page;
+          try {
+            page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
+          } catch {
+            // Single-process mode can drop the browser between shots; relaunch.
+            browser = await launchBrowser();
+            page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
+          }
           watch(page, shotName);
           await page.goto(`${base}/?lang=${lang}${s.hash}`, { waitUntil: 'domcontentloaded' });
           await settle(page);

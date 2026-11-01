@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { JobManager, RateLimiter, sseResponse } from '../src/server/http/jobs.js';
 
-const row = (n: number) => ({ outputId: n, sourceId: 's', sourceIndex: 0, preset: 'ig-feed-11', status: 'pass' as const, retries: 0 });
+const row = (n: number) => ({ outputId: n, sourceId: 's', sourceIndex: 0, preset: 'ig-feed-11', status: 'pass' as const, retries: 0, models: ['muse-spark-1.3'], traceMs: 1200 });
 
 describe('RateLimiter', () => {
   it('allows 3 per hour per IP, then refuses', () => {

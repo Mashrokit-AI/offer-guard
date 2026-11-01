@@ -1,4 +1,4 @@
-import { api, bboxDiv, BRAND_SLUG, dims, errText, h, modeBadge, presetName, qaBadge, t, type Lang } from './lib.js';
+import { api, bboxDiv, BRAND_SLUG, dims, errText, fmtDur, h, modeBadge, modelFooter, presetName, qaBadge, t, type Lang } from './lib.js';
 import type { OutputDetailDto, PresetDto } from './dto.js';
 
 /** Load a grayscale mask PNG and paint it tinted onto a canvas overlay. */
@@ -30,7 +30,7 @@ async function maskCanvas(url: string, color: string): Promise<HTMLCanvasElement
 
 export function outputView(lang: Lang, id: number): HTMLElement {
   const root = h('div', {});
-  root.append(h('a', { class: 'back', href: '#/' }, `← ${t(lang, 'detail_back')}`));
+  root.append(h('a', { class: 'back', href: '#/' }, `${lang === 'he' ? '→' : '←'} ${t(lang, 'detail_back')}`));
   const body = h('div', {}, h('p', { class: 'muted' }, '…'));
   root.append(body);
 
@@ -55,6 +55,7 @@ export function outputView(lang: Lang, id: number): HTMLElement {
       h('div', {},
         h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, qaBadge(lang, d.qaPass), modeBadge(lang, d.mode)),
         h('p', {}, title),
+        modelFooter(d.models ?? [], d.traceMs ?? 0),
       ),
     );
 
@@ -75,7 +76,8 @@ export function outputView(lang: Lang, id: number): HTMLElement {
     const tglZones = h('input', { type: 'checkbox', id: 'tgl-zones' }) as HTMLInputElement;
     const tglSafe = h('input', { type: 'checkbox', id: 'tgl-safe' }) as HTMLInputElement;
     const toggles = h('div', { class: 'toggles' },
-      h('label', {}, tglMasks, ` ${t(lang, 'toggle_masks')}`),
+      // Saved fixtures carry no masks; a dead toggle would only confuse.
+      d.masks.length > 0 ? h('label', {}, tglMasks, ` ${t(lang, 'toggle_masks')}`) : null,
       h('label', {}, tglZones, ` ${t(lang, 'toggle_zones')}`),
       h('label', {}, tglSafe, ` ${t(lang, 'toggle_safe')}`),
     );
@@ -185,17 +187,20 @@ export function outputView(lang: Lang, id: number): HTMLElement {
     const traceRows = d.trace.map((e) =>
       h('tr', {},
         h('td', {}, String(e.seq)),
-        h('td', { dir: 'ltr' }, e.tool_or_model),
+        h('td', { dir: 'ltr' }, h('span', { class: 'model-tag' }, e.tool_or_model.startsWith('model:') ? e.tool_or_model.slice('model:'.length) : e.tool_or_model)),
         h('td', { dir: 'auto' }, `${e.input_summary} → ${e.output_summary}`),
-        h('td', {}, `${e.duration_ms} ms`),
-        h('td', {}, e.cached ? t(lang, 'trace_cached') : t(lang, 'trace_live')),
+        h('td', { dir: 'ltr' }, fmtDur(e.duration_ms)),
+        h('td', {}, h('span', { class: `pill${e.cached ? '' : ' live'}` }, e.cached ? t(lang, 'trace_cached') : t(lang, 'trace_live'))),
       ),
     );
     const spark = d.trace.filter((e) => e.tool_or_model.startsWith('model:muse-spark')).length;
     const sam = d.trace.filter((e) => e.tool_or_model.startsWith('model:sam')).length;
     const images = d.trace.filter((e) => e.tool_or_model.startsWith('model:muse-image')).length;
     const other = d.trace.length - spark - sam - images;
-    const details = h('details', { class: 'card', id: 'trace', style: 'margin-top:18px' },
+    // Open by default on desktop so judges see the live model calls; closed
+    // on small screens where it would push the images down.
+    const desktop = window.matchMedia('(min-width: 900px)').matches;
+    const details = h('details', { class: 'card', id: 'trace', style: 'margin-top:18px', ...(desktop ? { open: 'true' } : {}) },
       h('summary', {}, `${t(lang, 'trace_title')} · ${t(lang, 'trace_calls_line', { spark, sam, images, other })}`),
       h('div', { class: 'table-scroll' },
         h('table', { class: 'cmp' },

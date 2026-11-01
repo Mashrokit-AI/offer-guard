@@ -19,7 +19,7 @@ import { segmentTargets } from '../repair/masks.js';
 import { Store } from '../store/db.js';
 import { TraceCollector } from '../workflow/trace.js';
 import { loadHttpConfig, type HttpConfig } from './config.js';
-import { buildBrand, buildBrands, buildJob, buildOutput } from './dto.js';
+import { buildBrand, buildBrands, buildJob, buildOutput, traceSummaryOf } from './dto.js';
 import { JobManager, RateLimiter, sseResponse, summarize, type JobRow } from './jobs.js';
 import { MEDIA_KINDS, readContainedFile, resolveMask, resolveMedia, type MediaKind } from './media.js';
 import { UploadError, validateAndStoreUpload, validateImageBytes } from './uploads.js';
@@ -286,7 +286,7 @@ export function createApp(deps: AppDeps): Hono {
           s.recordUsage('image', outcome.imageCalls);
           return id;
         });
-        onRow({ outputId, sourceId: cell.source.id, sourceIndex: cell.sourceIndex, preset: preset.id, status, retries: outcome.retries });
+        onRow({ outputId, sourceId: cell.source.id, sourceIndex: cell.sourceIndex, preset: preset.id, status, retries: outcome.retries, ...traceSummaryOf(trace.all()) });
       } catch (e) {
         const message = `${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
         const outputId = withStore((s) =>
@@ -297,7 +297,7 @@ export function createApp(deps: AppDeps): Hono {
             traceJson: JSON.stringify(trace.all()), error: message,
           }),
         );
-        onRow({ outputId, sourceId: cell.source.id, sourceIndex: cell.sourceIndex, preset: preset.id, status: 'failed', retries: 0, error: message });
+        onRow({ outputId, sourceId: cell.source.id, sourceIndex: cell.sourceIndex, preset: preset.id, status: 'failed', retries: 0, ...traceSummaryOf(trace.all()), error: message });
       }
     };
     await runPool(cells, 2, runCell);
@@ -651,7 +651,7 @@ export function createApp(deps: AppDeps): Hono {
                 traceJson: JSON.stringify(traces.get(sid)?.all() ?? []), error: message,
               }),
             );
-            onRow({ outputId, sourceId: sid, sourceIndex: idx, preset: presetId, status: 'failed', retries: 0, error: message });
+            onRow({ outputId, sourceId: sid, sourceIndex: idx, preset: presetId, status: 'failed', retries: 0, ...traceSummaryOf(traces.get(sid)?.all() ?? []), error: message });
           }
         }
       }
@@ -698,7 +698,7 @@ export function createApp(deps: AppDeps): Hono {
             modelCalls: 0, imageCalls: 0, latencyMs: 0, traceJson: '[]', error: message,
           }),
         );
-        onRow({ outputId, sourceId: source.id, sourceIndex: 0, preset: prev.preset, status: 'failed', retries: 0, error: message });
+        onRow({ outputId, sourceId: source.id, sourceIndex: 0, preset: prev.preset, status: 'failed', retries: 0, ...traceSummaryOf(traces.get(source.id)?.all() ?? []), error: message });
         withStore((s) => s.finishJob(storeJobId, 'failed', message, 0, 0));
         return { jobId: storeJobId };
       }

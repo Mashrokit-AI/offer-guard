@@ -57,6 +57,8 @@ export interface OutputCardDto {
   qaPass: boolean | null;
   retries: number;
   proofDiff: number | null;
+  models: string[];
+  traceMs: number;
 }
 
 export interface JobDto {

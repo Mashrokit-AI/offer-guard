@@ -1,4 +1,4 @@
-import { api, dims, errText, fmtTime, h, modeBadge, presetName, qaBadge, t, type Lang } from './lib.js';
+import { api, dims, errText, fmtTime, groupByOrientation, h, modeBadge, modelFooter, presetName, qaBadge, t, type Lang, type Orientation } from './lib.js';
 import type { BrandDto, JobDto, OutputCardDto, PresetDto } from './dto.js';
 
 interface JobRowEvent {
@@ -8,6 +8,8 @@ interface JobRowEvent {
   preset: string;
   status: string;
   retries: number;
+  models: string[];
+  traceMs: number;
   error?: string;
 }
 
@@ -16,17 +18,45 @@ function presetLabel(lang: Lang, presets: PresetDto[], id: string): string {
   return p ? `${presetName(lang, p.id, p.label)} · ${dims(p.width, p.height)}` : id;
 }
 
+function groupTitle(lang: Lang, key: Orientation): string {
+  return t(lang, key === 'square' ? 'group_square' : key === 'landscape' ? 'group_landscape' : 'group_vertical');
+}
+
+/**
+ * Output card: the image always renders at its true aspect ratio (never
+ * cropped) inside a preset-ratio frame on a neutral checkerboard. Failed
+ * cells render a text placeholder instead of a broken image.
+ */
 function outputCard(lang: Lang, presets: PresetDto[], o: OutputCardDto): HTMLElement {
   const card = h('a', { class: 'ad-card', href: `#/output/${o.id}` });
-  const img = h('img', { class: 'thumb', src: o.image, alt: presetLabel(lang, presets, o.preset), loading: 'lazy' }) as HTMLImageElement;
+  const frame = h('div', { class: 'thumb-frame' });
+  if (o.status === 'failed') {
+    frame.append(h('span', { class: 'thumb-failed' }, `✕ ${t(lang, 'job_failed')}`));
+  } else {
+    const p = presets.find((x) => x.id === o.preset);
+    if (p) frame.setAttribute('style', `aspect-ratio:${p.width}/${p.height}`);
+    frame.append(h('img', { src: o.image, alt: presetLabel(lang, presets, o.preset), loading: 'lazy' }) as HTMLImageElement);
+  }
   const badges = h('div', { class: 'card-badges' }, qaBadge(lang, o.qaPass), modeBadge(lang, o.mode));
-  if (o.retries > 0) badges.append(h('span', { class: 'chip' }, t(lang, 'qa_retry')));
-  const proof = o.proofDiff !== null ? h('div', { class: 'ad-card-meta' }, h('span', {}, t(lang, 'card_proof', { count: o.proofDiff, what: '✓' }))) : null;
+  // The retry badge means the retry FIXED it; a still-failing output shows only qa_fail.
+  if (o.retries > 0 && o.qaPass === true) badges.append(h('span', { class: 'chip fresh' }, t(lang, 'qa_retry')));
+  const proof = o.proofDiff !== null ? h('div', { class: 'ad-card-meta' }, h('span', {}, t(lang, 'card_proof', { count: o.proofDiff }))) : null;
   card.append(
-    img,
-    h('div', { class: 'ad-card-body' }, h('div', { class: 'ad-card-reason' }, presetLabel(lang, presets, o.preset)), badges, proof),
+    frame,
+    h('div', { class: 'ad-card-body' }, h('div', { class: 'ad-card-reason' }, presetLabel(lang, presets, o.preset)), badges, proof, modelFooter(o.models ?? [], o.traceMs ?? 0)),
   );
   return card;
+}
+
+/** Card grid grouped by orientation (square/portrait, landscape, vertical). */
+function groupedGrid(lang: Lang, presets: PresetDto[], outputs: OutputCardDto[]): HTMLElement {
+  const wrap = h('div', {});
+  for (const g of groupByOrientation(presets, outputs, (o) => o.preset)) {
+    const grid = h('div', { class: `grid cols-${g.key}` });
+    for (const o of g.items) grid.append(outputCard(lang, presets, o));
+    wrap.append(h('h3', { class: 'group-title' }, groupTitle(lang, g.key)), grid);
+  }
+  return wrap;
 }
 
 export function homeView(lang: Lang): HTMLElement {
@@ -46,7 +76,7 @@ export function homeView(lang: Lang): HTMLElement {
   // --- upload ---
   const fileInput = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: 'true', hidden: 'true' }) as HTMLInputElement;
   const thumbs = h('div', { class: 'thumbs' });
-  const drop = h('div', { class: 'drop', tabindex: '0', role: 'button', 'aria-label': t(lang, 'drop_title') }, h('div', { class: 'drop-title' }, t(lang, 'drop_title')), h('div', { class: 'muted' }, t(lang, 'drop_hint')), thumbs);
+  const drop = h('div', { class: 'drop', tabindex: '0', role: 'button' }, h('div', { class: 'drop-title' }, t(lang, 'drop_title')), h('div', { class: 'muted' }, t(lang, 'drop_hint')), thumbs);
   const refreshThumbs = (): void => {
     thumbs.replaceChildren();
     for (const f of state.files) {
@@ -143,22 +173,35 @@ export function homeView(lang: Lang): HTMLElement {
 
   // --- generate ---
   const genBtn = h('button', { type: 'button', class: 'btn', disabled: 'true' }, t(lang, 'btn_generate')) as HTMLButtonElement;
+  const genHint = h('span', { class: 'gen-hint' });
   const jobBanner = h('div', { class: 'job-banner', hidden: 'true' });
-  const grid = h('div', { class: 'grid' });
+  const liveWrap = h('div', {});
   const runBar = h('div', { class: 'toolbar', hidden: 'true' });
   const updateGenerate = (): void => {
     genBtn.disabled = state.running || state.files.length === 0 || state.sizes.size === 0;
+    const hint = state.files.length === 0 ? t(lang, 'gen_need_image') : state.sizes.size === 0 ? t(lang, 'gen_need_size') : '';
+    genHint.textContent = hint;
+    if (hint) genBtn.setAttribute('title', hint);
+    else genBtn.removeAttribute('title');
+  };
+
+  /** Cards landed so far in the running job (re-rendered grouped per size). */
+  let liveRows: OutputCardDto[] = [];
+  const renderLive = (): void => {
+    liveWrap.replaceChildren(groupedGrid(lang, state.presets, liveRows));
   };
 
   const renderRun = async (jobId: string): Promise<void> => {
     try {
       const run = (await api(`api/runs/${encodeURIComponent(jobId)}`)) as JobDto;
-      grid.replaceChildren();
-      for (const o of run.outputs) grid.append(outputCard(lang, state.presets, o));
+      liveRows = run.outputs;
+      renderLive();
       runBar.replaceChildren();
       runBar.hidden = false;
       const dl = h('a', { class: 'btn secondary small', href: `api/runs/${encodeURIComponent(jobId)}/zip` }, t(lang, 'btn_download_all')) as HTMLAnchorElement;
-      runBar.append(dl, h('span', { class: 'run-caption' }, `✓ ${run.outputs.filter((o) => o.status === 'pass').length} · ⚠ ${run.outputs.filter((o) => o.status === 'needs_review').length}`));
+      const fails = run.outputs.filter((o) => o.status === 'failed').length;
+      const caption = `✓ ${run.outputs.filter((o) => o.status === 'pass').length} · ⚠ ${run.outputs.filter((o) => o.status === 'needs_review').length}${fails > 0 ? ` · ✕ ${fails}` : ''}`;
+      runBar.append(dl, h('span', { class: 'run-caption' }, caption));
     } catch {
       // The grid keeps whatever progress rows already landed.
     }
@@ -168,6 +211,7 @@ export function homeView(lang: Lang): HTMLElement {
     state.running = true;
     updateGenerate();
     jobBanner.hidden = false;
+    jobBanner.scrollIntoView({ block: 'nearest' });
     const bar = h('div', {});
     const label = h('strong', {}, t(lang, 'btn_generating', { done: 0, total }));
     jobBanner.replaceChildren(label, h('div', { class: 'progress' }, bar));
@@ -178,13 +222,13 @@ export function homeView(lang: Lang): HTMLElement {
         if (e.type === 'progress' && e.row) {
           label.textContent = t(lang, 'btn_generating', { done: e.done, total: e.total });
           bar.style.width = `${Math.round((e.done / Math.max(1, e.total)) * 100)}%`;
-          const card = outputCard(lang, state.presets, {
+          liveRows = [...liveRows, {
             id: e.row.outputId, sourceId: e.row.sourceId, sourceIndex: e.row.sourceIndex,
             preset: e.row.preset, mode: state.mode, status: e.row.status,
             image: `media/output/${e.row.outputId}`, qaPass: e.row.status === 'pass' ? true : e.row.status === 'needs_review' ? false : null,
-            retries: e.row.retries, proofDiff: null,
-          });
-          grid.append(card);
+            retries: e.row.retries, proofDiff: null, models: e.row.models ?? [], traceMs: e.row.traceMs ?? 0,
+          }];
+          renderLive();
         } else if (e.type === 'done' || e.type === 'failed') {
           es.close();
           state.running = false;
@@ -217,7 +261,8 @@ export function homeView(lang: Lang): HTMLElement {
     if (state.brandId) fd.append('brandId', state.brandId);
     try {
       const res = (await api('api/jobs', { method: 'POST', body: fd })) as { key: string; jobId: string };
-      grid.replaceChildren();
+      liveRows = [];
+      renderLive();
       runBar.hidden = true;
       followJob(res.key, res.jobId, state.files.length * state.sizes.size);
     } catch (e) {
@@ -226,20 +271,32 @@ export function homeView(lang: Lang): HTMLElement {
     }
   });
 
-  // --- demo ---
-  const demoSec = h('section', { class: 'card', style: 'margin-top:18px' });
-  const demoGrid = h('div', { class: 'grid' });
+  // --- demo (first on the page) ---
+  const demoSec = h('section', { class: 'card demo-sec' });
+
+  // --- Meta models row ---
+  const modelChip = (name: string, descKey: 'models_sam' | 'models_image' | 'models_spark', anchor: string): HTMLElement =>
+    h('a', { class: 'model-chip', href: `#/about/${anchor}` }, h('b', { dir: 'ltr' }, name), h('span', {}, ` — ${t(lang, descKey)}`));
+  const modelsRow = h('section', { class: 'card models-row' },
+    h('strong', { class: 'models-title' }, t(lang, 'models_title')),
+    h('div', { class: 'models-chips' },
+      modelChip('SAM 3.1', 'models_sam', 'about-step2'),
+      modelChip('Muse Image', 'models_image', 'about-step3'),
+      modelChip('Muse Spark 1.3', 'models_spark', 'about-step1'),
+    ),
+  );
 
   const form = h('div', { class: 'card' },
+    h('h2', { class: 'try-title' }, t(lang, 'try_title')),
     h('div', { class: 'field' }, drop, fileInput),
     h('div', { class: 'formrow' },
       h('div', { class: 'field' }, h('label', { for: 'brand' }, t(lang, 'brand_label')), brandSel, matchNote),
       h('div', { class: 'field' }, h('label', {}, t(lang, 'mode_label')), h('div', { class: 'seg' }, modeProt, modeFast)),
     ),
     h('div', { class: 'field' }, h('label', {}, t(lang, 'sizes_label')), h('div', { class: 'toolbar', style: 'margin:0 0 8px' }, allMetaBtn), chips),
-    h('div', { class: 'toolbar' }, genBtn),
+    h('div', { class: 'toolbar' }, genBtn, genHint),
   );
-  root.append(form, jobBanner, runBar, grid, demoSec);
+  root.append(demoSec, modelsRow, form, jobBanner, runBar, liveWrap);
 
   // --- load brands/presets/demo ---
   void (async () => {
@@ -256,33 +313,45 @@ export function homeView(lang: Lang): HTMLElement {
     }
     try {
       const demo = (await api('api/demo')) as JobDto;
+      // The saved demo shows only passed outputs (plus the one Auto-fixed card,
+      // which proves the QA loop); anything else never ships in the fixture.
+      const passed = demo.outputs.filter((o) => o.qaPass === true);
+      const demoBody = h('div', {});
+      const firstSource = demo.sources[0];
+      if (firstSource) {
+        const srcCard = h('div', { class: 'ad-card source-card' },
+          h('div', { class: 'thumb-frame natural' }, h('img', { src: `media/source/${firstSource}`, alt: t(lang, 'detail_before') }) as HTMLImageElement),
+          h('div', { class: 'ad-card-body' }, h('div', { class: 'ad-card-reason' }, t(lang, 'detail_before'))),
+        );
+        demoBody.append(h('div', { class: 'demo-source' }, srcCard));
+      }
+      demoBody.append(groupedGrid(lang, state.presets, passed));
+      const liveBtn = h('button', { type: 'button', class: 'btn secondary' }, t(lang, 'btn_demo_live')) as HTMLButtonElement;
+      liveBtn.addEventListener('click', async () => {
+        const fd = new FormData();
+        fd.append('demoSource', 'gali-he');
+        // The demo holds one bonus output (fast li-post); sizes stay unique.
+        const sizes = [...new Set(demo.sizes)];
+        fd.append('sizes', sizes.join(','));
+        fd.append('mode', demo.mode);
+        if (demo.brandId) fd.append('brandId', demo.brandId);
+        try {
+          const res = (await api('api/jobs', { method: 'POST', body: fd })) as { key: string; jobId: string };
+          liveRows = [];
+          renderLive();
+          followJob(res.key, res.jobId, sizes.length);
+        } catch (e) {
+          jobBanner.hidden = false;
+          jobBanner.replaceChildren(h('strong', {}, errText(lang, e)));
+          jobBanner.scrollIntoView({ block: 'nearest' });
+        }
+      });
       demoSec.replaceChildren(
         h('h2', { style: 'margin-top:0' }, t(lang, 'btn_demo')),
         h('p', { class: 'muted', style: 'margin-top:0' }, t(lang, 'demo_saved', { time: fmtTime(lang, demo.finishedAt ?? demo.createdAt) })),
-        demoGrid,
-        h('div', { class: 'toolbar' }, (() => {
-          const b = h('button', { type: 'button', class: 'btn secondary' }, t(lang, 'btn_demo_live')) as HTMLButtonElement;
-          b.addEventListener('click', async () => {
-            const fd = new FormData();
-            fd.append('demoSource', 'gali-he');
-            fd.append('sizes', demo.sizes.join(','));
-            fd.append('mode', demo.mode);
-            if (demo.brandId) fd.append('brandId', demo.brandId);
-            try {
-              const res = (await api('api/jobs', { method: 'POST', body: fd })) as { key: string; jobId: string };
-              grid.replaceChildren();
-              followJob(res.key, res.jobId, demo.sizes.length);
-              window.scrollTo(0, 0);
-            } catch (e) {
-              jobBanner.hidden = false;
-              jobBanner.replaceChildren(h('strong', {}, errText(lang, e)));
-            }
-          });
-          return b;
-        })()),
+        demoBody,
+        h('div', { class: 'toolbar' }, liveBtn),
       );
-      demoGrid.replaceChildren();
-      for (const o of demo.outputs) demoGrid.append(outputCard(lang, state.presets, o));
     } catch {
       demoSec.hidden = true;
     }

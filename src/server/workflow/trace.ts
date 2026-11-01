@@ -1,7 +1,7 @@
 /**
- * Tool-call trace: every step of a check emits one event. Summaries are
- * factual (ids, counts, verdicts, timings) — never invented reasoning text.
- * The repair pipeline emits into the same collector as the sweep stages.
+ * Tool-call trace: every pipeline step emits one event into the collector.
+ * Summaries are factual (ids, counts, verdicts, timings) — never invented
+ * reasoning text.
  */
 export interface TraceEvent {
   seq: number;

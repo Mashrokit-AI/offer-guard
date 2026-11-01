@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { presetById } from '../src/shared/presets.js';
 import type { PlanBox, SourceAnalysis, TemplateSpec } from '../src/shared/schemas.js';
-import { freeOtherTexts, luminance, mirrorNorm, planLayout, travelsWithPixels } from '../src/server/adfit/planner.js';
+import { freeOtherTexts, luminance, mirrorNorm, planLayout, tallProductCell, travelsWithPixels } from '../src/server/adfit/planner.js';
 
 function analysis(over: Partial<SourceAnalysis> = {}): SourceAnalysis {
   return {
@@ -251,6 +251,79 @@ describe('layout planner', () => {
   expect(hit(plan.panel)).toBe(false);
   expect(inside(t, plan.safe)).toBe(true);
   expect(plan.notes.join(' ')).toMatch(/moved out of/);
+  });
+
+  it('expands a small 9:16 template product zone toward half the safe height', () => {
+    const preset = presetById('ig-story-916')!;
+    // NOA-like: small product zone, headline/subtext above it, no panel/logo.
+    const spec = template({
+      logo: null,
+      panel_zone: null,
+      headline_zone: { x: 0.25, y: 0.23, w: 0.5, h: 0.045 },
+      subtext_zone: { x: 0.34, y: 0.29, w: 0.32, h: 0.025 },
+      product_zone: { x: 0.342, y: 0.367, w: 0.316, h: 0.233 },
+      frames: [],
+    });
+    const plan = planLayout({
+      preset,
+      source: analysis({ logo_bbox: null, panel: null, headline: { text: 'Hi', bbox: { x: 100, y: 100, w: 300, h: 60 }, bold: true, color: '#000000' } }),
+      sourceWidth: 1080, sourceHeight: 1080, productCuts: CUTS, logoCut: null,
+      template: { id: 't', spec },
+    });
+    expect(plan.notes.join(' ')).toMatch(/9:16 fill/);
+    expect(plan.products).toHaveLength(1);
+    expect(plan.products[0]!.h).toBeGreaterThanOrEqual(Math.round(plan.safe.h * 0.45));
+    expect(inside(plan.products[0]!, plan.safe)).toBe(true);
+    // The product stays clear of the headline zone above it.
+    expect(plan.products[0]!.y).toBeGreaterThanOrEqual(plan.headline!.y + plan.headline!.h);
+  });
+
+  it('leaves a generous 9:16 product zone alone', () => {
+    const preset = presetById('ig-story-916')!;
+    const plan = planLayout({
+      preset, source: analysis(), sourceWidth: 1080, sourceHeight: 1080,
+      productCuts: CUTS, logoCut: LOGO_CUT,
+      template: { id: 't', spec: template({ product_zone: { x: 0.362, y: 0.262, w: 0.236, h: 0.375 } }) },
+    });
+    expect(plan.notes.join(' ')).toMatch(/products: template zone/);
+    expect(plan.notes.join(' ')).not.toMatch(/expanded/);
+  });
+
+  it('rejects template zones outside the safe area (defaults take over)', () => {
+    const preset = presetById('ig-story-916')!;
+    const plan = planLayout({
+      preset, source: analysis(), sourceWidth: 1080, sourceHeight: 1080,
+      productCuts: CUTS, logoCut: LOGO_CUT,
+      template: {
+        id: 't',
+        spec: template({ logo: { box: { x: 0.3, y: 0.85, w: 0.4, h: 0.08 }, corner: 'other' }, frames: [] }),
+      },
+    });
+    // No dark band here: the zone itself sits below the bottom UI zone.
+    expect(plan.notes.join(' ')).toMatch(/logo: template zone outside the safe area/);
+    expect(plan.logo!.y).toBeLessThan(preset.height * 0.3);
+    expect(inside(plan.logo, plan.safe)).toBe(true);
+  });
+
+  it('insets the default logo twice as far on tall canvases', () => {
+    const preset = presetById('ig-story-916')!;
+    const plan = planLayout({
+      preset, source: analysis(), sourceWidth: 1080, sourceHeight: 1080,
+      productCuts: CUTS, logoCut: LOGO_CUT, template: null,
+    });
+    // margin = 22px on 1080 wide; tall doubles it to 44.
+    expect(plan.logo!.y - plan.safe.y).toBe(44);
+    expect(plan.safe.x + plan.safe.w - (plan.logo!.x + plan.logo!.w)).toBe(44);
+  });
+
+  it('tallProductCell keeps big zones and gives up when crowded', () => {
+    const safe = { x: 54, y: 269, w: 972, h: 1267 };
+    const big = { x: 391, y: 502, w: 255, h: 720 };
+    expect(tallProductCell(big, [], safe, 22)).toBe(big);
+    const small = { x: 369, y: 705, w: 341, h: 447 };
+    // A neighbor band covering the whole free space: no room, keep the zone.
+    const crowded = tallProductCell(small, [{ x: 54, y: 269, w: 972, h: 1200 }], safe, 22);
+    expect(crowded).toBe(small);
   });
 
   it('renders free headlines outside the panel, skips ones inside it', () => {

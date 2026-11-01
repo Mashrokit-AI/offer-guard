@@ -16,6 +16,10 @@ export interface JobRow {
   preset: string;
   status: 'pass' | 'needs_review' | 'failed';
   retries: number;
+  /** Distinct model ids from the cell trace (for the live card footer). */
+  models: string[];
+  /** Summed trace durations in ms (for the live card footer). */
+  traceMs: number;
   error?: string;
 }
 

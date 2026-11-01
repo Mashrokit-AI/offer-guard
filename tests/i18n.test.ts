@@ -22,7 +22,7 @@ describe('i18n', () => {
   });
 
   it('localizes all 8 preset names, falls back to the server label', () => {
-    expect(presetName('he', 'ig-feed-11', 'Instagram feed 1:1')).toBe('פיד אינסטגרם 1:1');
+    expect(presetName('he', 'ig-feed-11', 'Instagram feed 1:1')).toBe('אינסטגרם פיד 1:1');
     expect(presetName('en', 'tiktok-916', 'TikTok 9:16')).toBe('TikTok 9:16');
     for (const p of PRESETS) {
       const heName = presetName('he', p.id, p.label);

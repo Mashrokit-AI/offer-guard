@@ -7,6 +7,8 @@ MatchPic adapts with Meta's models and is trustworthy: brand templates per size,
 protected product/logo pixels with proof, and a model QA check on every
 output.
 
+**Live demo: https://app.mashrokit.co.il/matchpic/**
+
 Upload a finished creative, pick a brand and sizes, get every placement back —
 in **Protected** mode (AI paints only the background; product, logo and text
 go back as original pixels, with a pixel proof) or **Fast** mode (AI
@@ -73,6 +75,9 @@ npm run ui-shots                # Playwright screenshot matrix → artifacts/ui/
 ```
 
 ## Env vars (all `ADFIT_*`, see `.env.example`)
+
+The `ADFIT_*` prefix is historical — kept after the MatchPic pivot so
+existing setups keep working. The names are stable; do not rename them.
 
 `ADFIT_PORT` (3023) · `ADFIT_BASE_PATH` (/) · `ADFIT_LIVE` (on/off kill
 switch) · `ADFIT_TRUST_PROXY` (0) · `ADFIT_DAILY_MODEL_CALLS` (300) ·

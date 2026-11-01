@@ -81,6 +81,10 @@ export interface OutputCardDto {
   qaPass: boolean | null;
   retries: number;
   proofDiff: number | null;
+  /** Distinct model ids from the trace, in first-appearance order (no `model:` prefix). */
+  models: string[];
+  /** Sum of trace step durations in ms (the honest per-output cost). */
+  traceMs: number;
 }
 
 export interface JobDto {
@@ -98,6 +102,32 @@ export interface JobDto {
   outputs: OutputCardDto[];
 }
 
+/** Distinct `model:*` ids + summed durations from decoded trace events. */
+export function traceSummaryOf(events: Array<{ tool_or_model?: unknown; duration_ms?: unknown }>): { models: string[]; traceMs: number } {
+  const models: string[] = [];
+  let traceMs = 0;
+  for (const e of events) {
+    if (typeof e.duration_ms === 'number' && Number.isFinite(e.duration_ms)) traceMs += Math.max(0, e.duration_ms);
+    if (typeof e.tool_or_model === 'string' && e.tool_or_model.startsWith('model:')) {
+      const id = e.tool_or_model.slice('model:'.length);
+      if (id && !models.includes(id)) models.push(id);
+    }
+  }
+  return { models, traceMs: Math.round(traceMs) };
+}
+
+/** Distinct `model:*` ids + summed durations from a stored trace (never throws). */
+export function traceSummary(traceJson: string | null): { models: string[]; traceMs: number } {
+  if (!traceJson) return { models: [], traceMs: 0 };
+  try {
+    const events = JSON.parse(traceJson) as Array<{ tool_or_model?: unknown; duration_ms?: unknown }>;
+    if (!Array.isArray(events)) return { models: [], traceMs: 0 };
+    return traceSummaryOf(events);
+  } catch {
+    return { models: [], traceMs: 0 };
+  }
+}
+
 function outputCard(o: OutputRow, sources: string[]): OutputCardDto {
   let qaPass: boolean | null = null;
   try {
@@ -113,6 +143,7 @@ function outputCard(o: OutputRow, sources: string[]): OutputCardDto {
   } catch {
     proofDiff = null;
   }
+  const { models, traceMs } = traceSummary(o.trace_json);
   return {
     id: o.id,
     sourceId: o.source_id,
@@ -124,6 +155,8 @@ function outputCard(o: OutputRow, sources: string[]): OutputCardDto {
     qaPass,
     retries: o.retries,
     proofDiff,
+    models,
+    traceMs,
   };
 }
 

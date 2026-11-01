@@ -15,13 +15,13 @@ export function aboutView(lang: Lang): HTMLElement {
     ['about_step5', 'muse-spark-1.3'],
   ];
   const ol = h('ol', { class: 'about-list' });
-  for (const [key, model] of steps) {
-    const li = h('li', {}, t(lang, key));
+  steps.forEach(([key, model], i) => {
+    const li = h('li', { id: `about-step${i + 1}` }, t(lang, key));
     if (model) li.append(' ', h('span', { class: 'model-tag', dir: 'ltr' }, model));
     ol.append(li);
-  }
+  });
   root.append(
-    h('section', { class: 'card' }, h('h2', { style: 'margin-top:0' }, `${t(lang, 'about_how')} — ${BRAND_NAME}`), ol),
+    h('section', { class: 'card', id: 'about-how' }, h('h2', { style: 'margin-top:0' }, `${t(lang, 'about_how')} — ${BRAND_NAME}`), ol),
   );
   const limits = h('ul', { class: 'about-list' });
   for (const key of ['about_limit1', 'about_limit2', 'about_limit3', 'about_limit4', 'about_limit5'] as const) {

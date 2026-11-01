@@ -60,6 +60,29 @@ function overlaps(a: PlanBox, b: PlanBox): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
+/**
+ * On tall canvases (9:16) a small template product zone pastes a thumbnail
+ * floating in empty space (seen on NOA). Grow the cell toward half the safe
+ * height across the full safe width, centered on the zone, without covering
+ * the other template zones. Returns the original cell when it is already big
+ * enough or there is no room to grow.
+ */
+export function tallProductCell(zoneBox: PlanBox, neighbors: PlanBox[], safe: PlanBox, margin: number): PlanBox {
+  if (zoneBox.h >= Math.round(safe.h * 0.45)) return zoneBox;
+  const targetH = Math.round(safe.h * 0.5);
+  let top = safe.y + margin;
+  let bottom = safe.y + safe.h - margin;
+  const cy = zoneBox.y + zoneBox.h / 2;
+  for (const nb of neighbors) {
+    if (nb.y + nb.h / 2 < cy) top = Math.max(top, nb.y + nb.h + margin);
+    else bottom = Math.min(bottom, nb.y - margin);
+  }
+  const h = Math.min(targetH, bottom - top);
+  if (h <= zoneBox.h) return zoneBox;
+  const center = Math.min(Math.max(cy, top + h / 2), bottom - h / 2);
+  return box(safe.x + margin, Math.round(center - h / 2), safe.w - margin * 2, h);
+}
+
 type BoxLike = { x: number; y: number; w: number; h: number };
 
 /** True when a text bbox travels with pasted element pixels (never re-render). */
@@ -142,6 +165,7 @@ export function planLayout(input: PlannerInput): LayoutPlan {
   const safe = presetSafeRect(preset);
   const notes: string[] = [];
   const margin = Math.round(Math.min(W, H) * 0.02);
+  const tall = H / W >= 1.5;
 
   // Texts printed ON an element travel with its pasted pixels and must never
   // be re-rendered on top (it garbles). Panel: center-in (generous — the
@@ -169,22 +193,47 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     const spec = input.template.spec;
     const mirrored = spec.direction !== source.direction;
     if (mirrored) notes.push(`template zones mirrored (${spec.direction}→${source.direction})`);
-    const zone = (n: NormBox | null): PlanBox | null => (n ? clampInto(denormalize(mirrored ? mirrorNorm(n) : n, W, H), safe) : null);
+    const zone = (n: NormBox | null, label: string): PlanBox | null => {
+      if (!n) return null;
+      const raw = denormalize(mirrored ? mirrorNorm(n) : n, W, H);
+      const clamped = clampInto(raw, safe);
+      // clampInto moves a fully-outside box into the safe area instead of
+      // clipping it — reject zones that barely overlap their true position
+      // (e.g. below the 9:16 bottom UI zone) so defaults take over.
+      const ix = Math.max(0, Math.min(raw.x + raw.w, clamped.x + clamped.w) - Math.max(raw.x, clamped.x));
+      const iy = Math.max(0, Math.min(raw.y + raw.h, clamped.y + clamped.h) - Math.max(raw.y, clamped.y));
+      if ((ix * iy) / Math.max(1, raw.w * raw.h) < 0.5) {
+        notes.push(`${label}: template zone outside the safe area, using default`);
+        return null;
+      }
+      return clamped;
+    };
+    // Neighbor boxes for the tall product expansion (placement-time boxes).
+    const neighborBoxes: PlanBox[] = [];
+    {
+      const push = (n: NormBox | null): void => {
+        if (n) neighborBoxes.push(clampInto(denormalize(mirrored ? mirrorNorm(n) : n, W, H), safe));
+      };
+      if (spec.logo) push(spec.logo.box);
+      push(spec.headline_zone);
+      push(spec.subtext_zone);
+      if (spec.panel_zone) push(spec.panel_zone.box);
+    }
 
     if (spec.logo && input.logoCut) {
-      const z = zone(spec.logo.box);
-      if (z) {
-        // A dark source logo vanishes on a dark template band (the template
-        // itself uses a light lockup there, which we don't have). Relocate
-        // to the default corner instead of pasting invisibly.
-        const zonePx = denormalize(mirrored ? mirrorNorm(spec.logo.box) : spec.logo.box, W, H);
-        const onDarkBand = spec.frames.some((f) => {
-          const fb = denormalize(mirrored ? mirrorNorm(f.box) : f.box, W, H);
-          return overlaps(zonePx, fb) && luminance(f.color) < 0.4;
-        });
-        if (onDarkBand) {
-          notes.push('logo: moved to default corner (dark band behind template zone)');
-        } else {
+      // A dark source logo vanishes on a dark template band (the template
+      // itself uses a light lockup there, which we don't have). Relocate
+      // to the default corner instead of pasting invisibly.
+      const zonePx = denormalize(mirrored ? mirrorNorm(spec.logo.box) : spec.logo.box, W, H);
+      const onDarkBand = spec.frames.some((f) => {
+        const fb = denormalize(mirrored ? mirrorNorm(f.box) : f.box, W, H);
+        return overlaps(zonePx, fb) && luminance(f.color) < 0.4;
+      });
+      if (onDarkBand) {
+        notes.push('logo: moved to default corner (dark band behind template zone)');
+      } else {
+        const z = zone(spec.logo.box, 'logo');
+        if (z) {
           const fit = fitCentered(input.logoCut.w, input.logoCut.h, z, 2);
           logo = clampInto(fit.box, safe);
           logoScale = fit.scale;
@@ -193,7 +242,15 @@ export function planLayout(input: PlannerInput): LayoutPlan {
       }
     }
     if (spec.product_zone && input.productCuts.length > 0) {
-      const z = zone(spec.product_zone);
+      let z = zone(spec.product_zone, 'products');
+      let expanded = false;
+      if (z && tall) {
+        const bigger = tallProductCell(z, neighborBoxes, safe, margin);
+        if (bigger !== z) {
+          z = bigger;
+          expanded = true;
+        }
+      }
       if (z) {
         // Split the zone horizontally when there are several products.
         const slot = Math.floor(z.w / input.productCuts.length);
@@ -203,19 +260,19 @@ export function planLayout(input: PlannerInput): LayoutPlan {
           products.push(clampInto(fit.box, safe));
           productScales.push(fit.scale);
         });
-        notes.push('products: template zone');
+        notes.push(expanded ? 'products: template zone expanded for 9:16 fill' : 'products: template zone');
       }
     }
     if (spec.panel_zone && source.panel) {
-      panel = zone(spec.panel_zone.box);
+      panel = zone(spec.panel_zone.box, 'panel');
       if (panel) notes.push('panel: template zone');
     }
     if (headlineFree && spec.headline_zone) {
-      headline = zone(spec.headline_zone);
+      headline = zone(spec.headline_zone, 'headline');
       if (headline) notes.push('headline: template zone');
     }
     if (subtextFree && spec.subtext_zone) {
-      subtext = zone(spec.subtext_zone);
+      subtext = zone(spec.subtext_zone, 'subtext');
       if (subtext) notes.push('subtext: template zone');
     }
     // Fall through to defaults for anything the template did not place.
@@ -226,8 +283,10 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     const scale = Math.min((W * 0.28) / input.logoCut.w, (H * 0.1) / input.logoCut.h, 2);
     const w = Math.max(1, Math.round(input.logoCut.w * scale));
     const h = Math.max(1, Math.round(input.logoCut.h * scale));
-    const x = source.direction === 'rtl' ? safe.x + safe.w - w - margin : safe.x + margin;
-    logo = clampInto(box(x, safe.y + margin, w, h), safe);
+    // Tall canvases get a double inset so the logo never hugs the safe edge.
+    const lm = tall ? margin * 2 : margin;
+    const x = source.direction === 'rtl' ? safe.x + safe.w - w - lm : safe.x + lm;
+    logo = clampInto(box(x, safe.y + lm, w, h), safe);
     logoScale = scale;
     notes.push(`logo: default top corner (${source.direction})`);
   }

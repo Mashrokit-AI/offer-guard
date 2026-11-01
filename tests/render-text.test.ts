@@ -72,7 +72,7 @@ describe('image prompts', () => {
     expect(p).toContain('x=54');
     expect(p).toContain('x=1026');
     expect(p).toContain('y=269');
-    expect(p).toContain('y=1651');
+    expect(p).toContain('y=1536');
   });
 
   it('plate prompt bans all foreground content and keeps the style', () => {
