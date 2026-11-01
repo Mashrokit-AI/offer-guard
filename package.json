@@ -1,9 +1,9 @@
 {
-  "name": "adfit",
+  "name": "matchpic",
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "AdFit — one creative to every placement size, with Meta's models (Meta hackathon)",
+  "description": "MatchPic — one creative to every placement size, with Meta's models (Meta hackathon)",
   "engines": {
     "node": ">=20"
   },

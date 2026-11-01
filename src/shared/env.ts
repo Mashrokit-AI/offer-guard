@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
  * Secrets (the Model API key) live OUTSIDE the repo so that neither git nor a
  * coding agent working in this folder can read them. Default:
  * ~/.config/offer-guard/secrets.env (chmod 600) — the historical path, kept so
- * existing setups keep working after the AdFit pivot.
+ * existing setups keep working after the MatchPic pivot.
  */
 export function secretsFilePath(env: NodeJS.ProcessEnv = process.env): string {
   return (

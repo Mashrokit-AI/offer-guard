@@ -217,7 +217,7 @@ export async function renderPanel(input: RenderInput): Promise<RenderResult> {
   }
 }
 
-// --- free-text blocks (AdFit protected mode) ---
+// --- free-text blocks (MatchPic protected mode) ---
 
 export interface TextLine {
   text: string;

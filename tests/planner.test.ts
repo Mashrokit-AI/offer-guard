@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { presetById } from '../src/shared/presets.js';
 import type { PlanBox, SourceAnalysis, TemplateSpec } from '../src/shared/schemas.js';
-import { freeOtherTexts, mirrorNorm, planLayout, travelsWithPixels } from '../src/server/adfit/planner.js';
+import { freeOtherTexts, luminance, mirrorNorm, planLayout, travelsWithPixels } from '../src/server/adfit/planner.js';
 
 function analysis(over: Partial<SourceAnalysis> = {}): SourceAnalysis {
   return {
@@ -150,7 +150,8 @@ describe('layout planner', () => {
       template: null,
     });
     expect(plan.other_texts).toHaveLength(1);
-    expect(plan.other_texts[0]).toMatchObject({ x: 850, y: 140, w: 140, h: 34 });
+    // 140x34 grows to the 80x36 minimum, centered.
+    expect(plan.other_texts[0]).toMatchObject({ x: 850, y: 139, w: 140, h: 36 });
     expect(inside(plan.other_texts[0]!, plan.safe)).toBe(true);
   });
 
@@ -167,9 +168,9 @@ describe('layout planner', () => {
       logoCut: LOGO_CUT,
       template: null,
     });
-    // Relative height would be ~18px; the plan guarantees 30px.
-    expect(plan.other_texts[0]!.h).toBeGreaterThanOrEqual(30);
-    expect(plan.other_texts[0]!.w).toBeGreaterThanOrEqual(60);
+    // Relative height would be ~18px; the plan guarantees 36px.
+    expect(plan.other_texts[0]!.h).toBeGreaterThanOrEqual(36);
+    expect(plan.other_texts[0]!.w).toBeGreaterThanOrEqual(80);
     expect(inside(plan.other_texts[0]!, plan.safe)).toBe(true);
   });
 
@@ -191,6 +192,65 @@ describe('layout planner', () => {
     });
     expect(plan.other_texts).toHaveLength(1);
     expect(plan.notes.join(' ')).toMatch(/travel with pasted pixels/);
+  });
+
+  it('lays wide canvases side-by-side: product left, text column right (rtl)', () => {
+    const preset = presetById('fb-link')!;
+    const src = analysis({
+      panel: null,
+      headline: { text: 'Hi', bbox: { x: 100, y: 100, w: 300, h: 60 }, bold: true, color: '#000000' },
+      subtext: { text: 'Sub', bbox: { x: 100, y: 200, w: 200, h: 40 }, bold: false, color: '#000000' },
+    });
+    const plan = planLayout({
+      preset, source: src, sourceWidth: 1080, sourceHeight: 1080,
+      productCuts: CUTS, logoCut: LOGO_CUT, template: null,
+    });
+    expect(plan.notes.join(' ')).toMatch(/side-by-side/);
+    // Product on the left half, headline in the right column.
+    expect(plan.products[0]!.x + plan.products[0]!.w).toBeLessThan(preset.width / 2 + 80);
+    expect(plan.headline!.x).toBeGreaterThan(preset.width / 2 - 80);
+    expect(plan.subtext!.y).toBeGreaterThan(plan.headline!.y);
+    for (const b of [plan.products[0]!, plan.headline!, plan.subtext!]) {
+      expect(inside(b, plan.safe)).toBe(true);
+    }
+  });
+
+  it('relocates the logo out of a dark template band', () => {
+    const preset = presetById('ig-story-916')!;
+    const spec = template({
+      logo: { box: { x: 0.3, y: 0.85, w: 0.4, h: 0.08 }, corner: 'bottom-left' },
+      frames: [{ box: { x: 0, y: 0.79, w: 1, h: 0.21 }, color: '#0f4c5c', edge: 'bottom', kind: 'band' }],
+    });
+    const plan = planLayout({
+      preset, source: analysis(), sourceWidth: 1080, sourceHeight: 1080,
+      productCuts: CUTS, logoCut: LOGO_CUT, template: { id: 't', spec },
+    });
+    // Dark band (#0f4c5c, luminance ~0.07): default corner, not the band.
+    expect(plan.notes.join(' ')).toMatch(/dark band/);
+    expect(plan.logo!.y).toBeLessThan(preset.height * 0.3);
+    expect(luminance('#0f4c5c')).toBeLessThan(0.4);
+    expect(luminance('#e8fbf7')).toBeGreaterThan(0.4);
+  });
+
+  it('moves other texts out of the logo/product/panel (relative mapping can collide)', () => {
+  const preset = presetById('ig-story-916')!;
+  const src = analysis({
+    other_texts: [{ text: 'tagline', bbox: { x: 740, y: 151, w: 250, h: 30 }, bold: false, color: '#1f5f6b' }],
+  });
+  expect(freeOtherTexts(src)).toHaveLength(1);
+  const plan = planLayout({
+    preset, source: src, sourceWidth: 1080, sourceHeight: 1080,
+    productCuts: CUTS, logoCut: LOGO_CUT, template: null,
+  });
+  expect(plan.other_texts).toHaveLength(1);
+  const t = plan.other_texts[0]!;
+  const hit = (b: PlanBox | null): boolean =>
+    !!b && t.x < b.x + b.w && b.x < t.x + t.w && t.y < b.y + b.h && b.y < t.y + t.h;
+  expect(hit(plan.logo)).toBe(false);
+  for (const p of plan.products) expect(hit(p)).toBe(false);
+  expect(hit(plan.panel)).toBe(false);
+  expect(inside(t, plan.safe)).toBe(true);
+  expect(plan.notes.join(' ')).toMatch(/moved out of/);
   });
 
   it('renders free headlines outside the panel, skips ones inside it', () => {

@@ -1,4 +1,4 @@
-# AdFit — Architecture
+# MatchPic — Architecture
 
 Meta hackathon · team Mashrokit (Oz + Evyatar).
 Pivot (Nov 1): Offer Guard (checking ad promises) is dropped — not a proven

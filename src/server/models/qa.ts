@@ -3,7 +3,7 @@ import { qaVerdictSchema, type QAverdict, type SourceAnalysis } from '../../shar
 import { structuredCall, type StructuredAttempt, type StructuredOutputMode } from './spark.js';
 
 /** Bump when the prompts / JSON schema change (cache key input). */
-export const QA_PROMPT_VERSION = 'qa-output-v2';
+export const QA_PROMPT_VERSION = 'qa-output-v3';
 
 export const QA_SYSTEM = [
   'You are a strict QA checker for ad creative adaptation.',
@@ -27,6 +27,7 @@ export function buildQaPrompt(source: SourceAnalysis, width: number, height: num
     `- products: ${source.products.length > 0 ? source.products.map((p) => p.label).join(', ') + ' — each must appear fully, not cropped, not redrawn beyond scaling' : 'none'}`,
     'Check the output: every verbatim text present and EXACT (letter by letter, same script and order); logo present and not cropped; products present and not cropped; nothing important inside the outer edge bands (top/bottom 14% on tall 9:16, outer 4% otherwise).',
     'invented_text = output strings that appear NEITHER in the source image NOR in the facts above. Text printed on the product itself (brand name on the packshot) or the logo wordmark exists in the source — compare against the FIRST image before calling anything invented.',
+    'Small text is hard to read: compare tiny punctuation (gershayim ״, geresh ׳, dots) letter by letter against the FIRST image. Do not confuse ״ with the letter yod (י) — fail only when the mark is clearly a different letter.',
     ...extraNotes.map((n) => `Retry note from the previous QA round: ${n}`),
     'Reply with a single JSON object: pass, reasons (empty on pass), texts_read (expected/found/exact per source text), logo_ok, product_ok, safe_area_ok, invented_text (empty when none).',
   ];

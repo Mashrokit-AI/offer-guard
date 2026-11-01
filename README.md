@@ -1,9 +1,9 @@
-# AdFit — one creative → every placement size
+# MatchPic — one creative → every placement size
 
 Our studio adapts every approved creative to 6–8 placement sizes by hand,
 every day, for 100+ brands. Generic AI resizers redraw the product, break
 Hebrew lettering and ignore the brand's own layout rules for each size.
-AdFit adapts with Meta's models and is trustworthy: brand templates per size,
+MatchPic adapts with Meta's models and is trustworthy: brand templates per size,
 protected product/logo pixels with proof, and a model QA check on every
 output.
 
@@ -57,7 +57,7 @@ npm run web        # build the UI + start on http://127.0.0.1:3023/
 
 The Model API key lives **outside the repo** in
 `~/.config/offer-guard/secrets.env` (`MODEL_API_KEY=…`, chmod 600) —
-the historical path, kept after the AdFit pivot. Non-secret settings go in
+the historical path, kept after the MatchPic pivot. Non-secret settings go in
 `.env` (see `.env.example`).
 
 Useful commands:
@@ -89,7 +89,10 @@ switch) · `ADFIT_TRUST_PROXY` (0) · `ADFIT_DAILY_MODEL_CALLS` (300) ·
   (metadata stripped, huge photos normalized to 1600 px), deleted after 24 h;
   visitor brands/templates expire after 24 h too. Max 3 sources × 8 sizes
   per job. Demo brands are permanent fixtures.
-- The product name is one string in `src/shared/brand.ts`.
+- The product name is one string in `src/shared/brand.ts` (exports follow
+  via `BRAND_SLUG`). `ADFIT_*` env vars, `data/adfit.db`, trace step names and
+  the `src/server/adfit/` dir are stable internal identifiers and intentionally
+  not renamed.
 
 ## Honest limitations
 

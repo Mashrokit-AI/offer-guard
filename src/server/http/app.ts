@@ -5,11 +5,12 @@ import { dirname, join } from 'node:path';
 import type OpenAI from 'openai';
 import sharp from 'sharp';
 import { z } from 'zod';
+import { BRAND_SLUG } from '../../shared/brand.js';
 import { loadModelConfig } from '../../shared/config.js';
 import { PRESETS, presetById } from '../../shared/presets.js';
 import { templateSpecSchema } from '../../shared/schemas.js';
 import { DEMO_JOB_ID } from '../adfit/seed.js';
-import { prepareSource, runOutput, runPool, type AdFitMode, type OutputTemplate, type PreparedSource } from '../adfit/pipeline.js';
+import { prepareSource, runOutput, runPool, type FitMode, type OutputTemplate, type PreparedSource } from '../adfit/pipeline.js';
 import { matchBrand } from '../models/brand-match.js';
 import { createModelClient } from '../models/client.js';
 import { readTemplate, specBoxesNormalized } from '../models/template-read.js';
@@ -25,7 +26,7 @@ import { UploadError, validateAndStoreUpload, validateImageBytes } from './uploa
 import { buildZip, sha256Hex } from './zip.js';
 
 /**
- * Public read-only web app + bounded live jobs. AdFit never publishes
+ * Public read-only web app + bounded live jobs. MatchPic never publishes
  * anything: there is no write path to any external ad platform in this
  * module or its imports.
  */
@@ -220,7 +221,7 @@ export function createApp(deps: AppDeps): Hono {
   const executeJob = async (
     storeJobId: string,
     cells: CellDef[],
-    mode: AdFitMode,
+    mode: FitMode,
     brandId: string | null,
     brandName: string | null,
     prepareTraces: Map<string, TraceCollector>,
@@ -683,7 +684,7 @@ export function createApp(deps: AppDeps): Hono {
     const bytes = await readContainedFile(repoRoot, source.image_path);
     if (!bytes) return err(c, 404, 'err_not_found');
     const storeJobId = newId('job');
-    const mode = (prev.mode === 'fast' ? 'fast' : 'protected') as AdFitMode;
+    const mode = (prev.mode === 'fast' ? 'fast' : 'protected') as FitMode;
     withStore((s) => s.insertJob({ id: storeJobId, brandId: prevJob.brand_id, mode, sizes: [prev.preset], sources: [source.id] }));
     const brand = prevJob.brand_id ? withStore((s) => s.getBrand(prevJob.brand_id as string)) : null;
     const job = jobs.submit('regenerate', 1, async (onRow) => {
@@ -738,7 +739,7 @@ export function createApp(deps: AppDeps): Hono {
     for (const o of outputs) {
       const bytes = await readContainedFile(repoRoot, o.image_path);
       if (!bytes) continue;
-      const name = `adfit-${o.preset}-${o.id}.png`;
+      const name = `${BRAND_SLUG}-${o.preset}-${o.id}.png`;
       entries.push({ name, data: bytes });
       manifest.push({ file: name, preset: o.preset, source: o.source_id, mode: o.mode, status: o.status, qa: o.qa_json ? JSON.parse(o.qa_json) : null, sha256: sha256Hex(bytes) });
     }
@@ -749,7 +750,7 @@ export function createApp(deps: AppDeps): Hono {
       status: 200,
       headers: {
         'content-type': 'application/zip',
-        'content-disposition': `attachment; filename="adfit-${job.id}.zip"`,
+        'content-disposition': `attachment; filename="${BRAND_SLUG}-${job.id}.zip"`,
         'content-length': String(zip.length),
       },
     });

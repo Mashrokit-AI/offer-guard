@@ -1,8 +1,8 @@
-import { BRAND_NAME } from '../shared/brand.js';
+import { BRAND_NAME, BRAND_SLUG } from '../shared/brand.js';
 import { STRINGS, t, type Lang, type MessageKey } from '../shared/i18n.js';
 
 export type { Lang };
-export { BRAND_NAME, STRINGS, t };
+export { BRAND_NAME, BRAND_SLUG, STRINGS, t };
 
 /** Tiny DOM helper. String children become text nodes — never HTML. */
 export function h(

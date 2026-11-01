@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * AdFit live batch (one command, minimal approvals). Steps (comma-separated
+ * MatchPic live batch (one command, minimal approvals). Steps (comma-separated
  * --steps, default: all):
  *
  *   specs      parse missing fixture template specs (Spark) into fixtures/
@@ -27,7 +27,7 @@ import { templateSpecSchema, type TemplateSpec } from '../src/shared/schemas.js'
 import { createModelClient } from '../src/server/models/client.js';
 import { generateImage } from '../src/server/models/muse-image.js';
 import { readTemplate } from '../src/server/models/template-read.js';
-import { prepareSource, runOutput, runPool, type AdFitMode, type OutputTemplate } from '../src/server/adfit/pipeline.js';
+import { prepareSource, runOutput, runPool, type FitMode, type OutputTemplate } from '../src/server/adfit/pipeline.js';
 import { TraceCollector } from '../src/server/workflow/trace.js';
 
 const REPO_ROOT = findRepoRoot(import.meta.url);
@@ -111,7 +111,7 @@ async function stepNoa(): Promise<void> {
 
 interface SizeReport {
   preset: string;
-  mode: AdFitMode;
+  mode: FitMode;
   ms: number;
   qa: string;
   retries: number;
@@ -131,7 +131,7 @@ async function runAllSizes(
   runName: string,
   sourcePath: string,
   brandName: string,
-  mode: AdFitMode,
+  mode: FitMode,
   templates: Map<string, OutputTemplate>,
   frameFor: Map<string, Buffer>,
 ): Promise<SizeReport[]> {

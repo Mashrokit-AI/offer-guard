@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * AdFit UI screenshot matrix + failure gate. Seeds the store, serves the real
+ * MatchPic UI screenshot matrix + failure gate. Seeds the store, serves the real
  * app on 127.0.0.1 and drives it with Playwright:
  *
  *   npm run ui-shots [-- --live] [--port 3023]

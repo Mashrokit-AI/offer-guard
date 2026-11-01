@@ -81,7 +81,7 @@ export function artifactDigest(png: Buffer, tag: string): ArtifactDigest {
   return { sha256, tag, digest: `${sha256}:${tag}` };
 }
 
-// --- AdFit element proof ---
+// --- MatchPic element proof ---
 
 export interface ElementProofInput {
   /** Source cutout BEFORE scaling (RGBA, alpha = mask). */

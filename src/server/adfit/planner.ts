@@ -47,6 +47,19 @@ export function mirrorNorm(n: NormBox): NormBox {
   return { x: 1 - n.x - n.w, y: n.y, w: n.w, h: n.h };
 }
 
+/** Relative luminance of a #rrggbb color (0 = black, 1 = white). */
+export function luminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const f = (c: number): number => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+
+function overlaps(a: PlanBox, b: PlanBox): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
 type BoxLike = { x: number; y: number; w: number; h: number };
 
 /** True when a text bbox travels with pasted element pixels (never re-render). */
@@ -74,6 +87,45 @@ function containedIn(
   outer: { x: number; y: number; w: number; h: number },
 ): boolean {
   return inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+}
+
+/**
+ * Nudge free other-text boxes out of other elements. Relative mapping does
+ * not know about template zones or the relocated default logo, so a tagline
+ * can land on top of the logo (seen live on the 9:16 story). Each box tries
+ * moves above/below/left/right of whatever it overlaps until it is clear,
+ * always staying fully inside the safe area; already-placed siblings count
+ * as blockers too. The text is never dropped — worst case it keeps its
+ * mapped box.
+ */
+export function decollideOthers(others: PlanBox[], reserved: PlanBox[], safe: PlanBox, margin: number): { boxes: PlanBox[]; moved: number } {
+  const placed: PlanBox[] = [];
+  let moved = 0;
+  for (const orig of others) {
+    const b = { ...orig };
+    const blockers = [...reserved, ...placed];
+    for (let iter = 0; iter < 8; iter++) {
+      const hit = blockers.find((r) => overlaps(b, r));
+      if (!hit) break;
+      const candidates = [
+        box(b.x, hit.y - b.h - margin, b.w, b.h),
+        box(b.x, hit.y + hit.h + margin, b.w, b.h),
+        box(hit.x - b.w - margin, b.y, b.w, b.h),
+        box(hit.x + hit.w + margin, b.y, b.w, b.h),
+      ];
+      const good = candidates.find(
+        (c) =>
+          c.x >= safe.x && c.y >= safe.y && c.x + c.w <= safe.x + safe.w && c.y + c.h <= safe.y + safe.h &&
+          !blockers.some((r) => overlaps(c, r)),
+      );
+      if (!good) break;
+      b.x = good.x;
+      b.y = good.y;
+      moved++;
+    }
+    placed.push(b);
+  }
+  return { boxes: placed, moved };
 }
 
 /**
@@ -122,10 +174,22 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     if (spec.logo && input.logoCut) {
       const z = zone(spec.logo.box);
       if (z) {
-        const fit = fitCentered(input.logoCut.w, input.logoCut.h, z, 2);
-        logo = clampInto(fit.box, safe);
-        logoScale = fit.scale;
-        notes.push('logo: template zone');
+        // A dark source logo vanishes on a dark template band (the template
+        // itself uses a light lockup there, which we don't have). Relocate
+        // to the default corner instead of pasting invisibly.
+        const zonePx = denormalize(mirrored ? mirrorNorm(spec.logo.box) : spec.logo.box, W, H);
+        const onDarkBand = spec.frames.some((f) => {
+          const fb = denormalize(mirrored ? mirrorNorm(f.box) : f.box, W, H);
+          return overlaps(zonePx, fb) && luminance(f.color) < 0.4;
+        });
+        if (onDarkBand) {
+          notes.push('logo: moved to default corner (dark band behind template zone)');
+        } else {
+          const fit = fitCentered(input.logoCut.w, input.logoCut.h, z, 2);
+          logo = clampInto(fit.box, safe);
+          logoScale = fit.scale;
+          notes.push('logo: template zone');
+        }
       }
     }
     if (spec.product_zone && input.productCuts.length > 0) {
@@ -179,18 +243,47 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     panel = clampInto(box(safe.x + (safe.w - w) / 2, safe.y + safe.h - ph - margin, w, ph), safe);
     notes.push('panel: default bottom');
   }
-  if (headlineFree && !headline && source.headline) {
+  // Wide canvases (aspect > 1.3) with products: side-by-side — product on one
+  // side, text column on the other. Stacking on a wide canvas shrinks the
+  // product to a thumbnail and blows the text up to billboard size.
+  const wide = W / H > 1.3 && input.productCuts.length > 0 && products.length === 0;
+  const rtl = source.direction === 'rtl';
+  // Text column geometry for the wide branch (computed once, used twice).
+  const prodW = Math.round(safe.w * 0.42);
+  const colW = safe.w - prodW - margin * 2;
+  const colX = rtl ? safe.x + safe.w - colW : safe.x;
+  const prodX = rtl ? safe.x : safe.x + safe.w - prodW;
+  if (wide) {
+    // Text column stays above the bottom panel when there is one.
+    const colBottom = panel ? panel.y - margin : safe.y + safe.h;
+    const logoOnTextSide = logo !== null && (rtl ? logo.x + logo.w > colX : logo.x < colX + colW);
+    let cursor = logoOnTextSide && logo ? logo.y + logo.h + margin : safe.y + margin;
+    if (headlineFree && !headline && source.headline) {
+      const aspect = source.headline.bbox.h / Math.max(1, source.headline.bbox.w);
+      const hh = Math.min(Math.max(30, Math.round(colW * aspect)), Math.round(H * 0.16), Math.max(30, colBottom - cursor));
+      headline = clampInto(box(colX, cursor, colW, hh), safe);
+      cursor = headline.y + headline.h + margin;
+      notes.push('headline: default side column');
+    }
+    if (subtextFree && !subtext && source.subtext) {
+      const aspect = source.subtext.bbox.h / Math.max(1, source.subtext.bbox.w);
+      const sh = Math.min(Math.max(24, Math.round(colW * aspect)), Math.round(H * 0.1), Math.max(24, colBottom - cursor));
+      subtext = clampInto(box(colX, cursor, colW, sh), safe);
+      notes.push('subtext: default side column');
+    }
+  }
+  if (!wide && headlineFree && !headline && source.headline) {
     const hw = Math.round(safe.w * 0.86);
     const aspect = source.headline.bbox.h / Math.max(1, source.headline.bbox.w);
-    const hh = Math.max(24, Math.round(hw * aspect));
+    const hh = Math.max(30, Math.min(Math.round(hw * aspect), Math.round(H * 0.13)));
     const anchorTop = panel ? panel.y : safe.y + safe.h - margin;
     headline = clampInto(box(safe.x + (safe.w - hw) / 2, anchorTop - hh - margin * 2, hw, hh), safe);
     notes.push('headline: default above panel');
   }
-  if (subtextFree && !subtext && source.subtext) {
+  if (!wide && subtextFree && !subtext && source.subtext) {
     const sw = Math.round(safe.w * 0.8);
     const aspect = source.subtext.bbox.h / Math.max(1, source.subtext.bbox.w);
-    const sh = Math.max(18, Math.round(sw * aspect));
+    const sh = Math.max(24, Math.min(Math.round(sw * aspect), Math.round(H * 0.09)));
     const anchorTop = headline ? headline.y : panel ? panel.y : safe.y + safe.h - margin;
     subtext = clampInto(box(safe.x + (safe.w - sw) / 2, anchorTop - sh - margin, sw, sh), safe);
     notes.push('subtext: default above headline');
@@ -207,8 +300,8 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     // Minimum readable box: relative mapping can produce slivers (e.g. a
     // 10px-tall tagline on a tall size) that no font fits. Grow around the
     // center, still inside the safe area.
-    const minW = 60;
-    const minH = 30;
+    const minW = 80;
+    const minH = 36;
     if (mapped.w >= minW && mapped.h >= minH) return mapped;
     const cx = mapped.x + mapped.w / 2;
     const cy = mapped.y + mapped.h / 2;
@@ -216,7 +309,21 @@ export function planLayout(input: PlannerInput): LayoutPlan {
   });
   if (otherTexts.length > 0) notes.push(`${otherTexts.length} other text(s): relative position`);
 
-  if (input.productCuts.length > 0 && products.length === 0) {
+  if (wide) {
+    const top = safe.y + margin;
+    const bottom = panel ? panel.y - margin : safe.y + safe.h - margin;
+    // Product zone: full height on its side, products stacked vertically.
+    const budget = box(prodX, top, prodW, Math.max(40, bottom - top));
+    const slot = Math.floor(budget.h / input.productCuts.length);
+    input.productCuts.forEach((cut, i) => {
+      const cell = box(budget.x, budget.y + i * slot, budget.w, i === input.productCuts.length - 1 ? budget.h - i * slot : slot);
+      const fit = fitCentered(cut.w, cut.h, cell, 1.5);
+      products.push(clampInto(fit.box, safe));
+      productScales.push(fit.scale);
+    });
+    notes.push('products: default side-by-side (wide)');
+  }
+  if (!wide && input.productCuts.length > 0 && products.length === 0) {
     const top = logo ? logo.y + logo.h + margin : safe.y + margin;
     const bottoms = [panel?.y, headline?.y, subtext?.y].filter((v): v is number => typeof v === 'number');
     const bottom = (bottoms.length > 0 ? Math.min(...bottoms) : safe.y + safe.h) - margin;
@@ -231,6 +338,17 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     notes.push('products: default centered in safe area');
   }
 
+  // De-collide after every other box is known (products come last above).
+  const reserved: PlanBox[] = [
+    ...(logo ? [logo] : []),
+    ...products,
+    ...(headline ? [headline] : []),
+    ...(subtext ? [subtext] : []),
+    ...(panel ? [panel] : []),
+  ];
+  const { boxes: placedOthers, moved: othersMoved } = decollideOthers(otherTexts, reserved, safe, margin);
+  if (othersMoved > 0) notes.push(`${othersMoved} other text(s) moved out of overlapping elements`);
+
   return layoutPlanSchema.parse({
     preset: preset.id,
     width: W,
@@ -243,7 +361,7 @@ export function planLayout(input: PlannerInput): LayoutPlan {
     headline,
     subtext,
     panel,
-    other_texts: otherTexts,
+    other_texts: placedOthers,
     product_scales: productScales,
     logo_scale: logoScale,
     notes,

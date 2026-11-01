@@ -26,7 +26,7 @@ export interface PipelineModels {
   image: ImageGenConfig;
 }
 
-export type AdFitMode = 'protected' | 'fast';
+export type FitMode = 'protected' | 'fast';
 
 /** One cut element: tight RGBA pixels (alpha = mask) + source offset. */
 export interface ElementCut {
@@ -63,7 +63,7 @@ export interface OutputTemplate {
 export interface OutputRequest {
   source: PreparedSource;
   preset: Preset;
-  mode: AdFitMode;
+  mode: FitMode;
   template: OutputTemplate | null;
   /** Transparent PNG placed exactly, last. Must match the preset size. */
   framePng: Buffer | null;
@@ -269,7 +269,7 @@ export function buildPlatePrompt(req: OutputRequest, plan: LayoutPlan, qaNotes: 
     `Style to match: ${a.background.description} (type: ${a.background.type}; colors: ${a.background.colors.join(', ') || 'match the reference'}).`,
   ];
   if (req.template) lines.push(`Brand layout style for this size: ${req.template.spec.background_style}.`);
-  lines.push('Even, seamless, no vignette traps; leave clean space where the product and text will be placed by code.');
+  lines.push('One seamless background across the whole canvas: no bands, no split regions, no vignette traps; leave clean space where the product and text will be placed by code.');
   for (const n of qaNotes) lines.push(`Fix from QA review: ${n}`);
   return lines.join('\n');
 }

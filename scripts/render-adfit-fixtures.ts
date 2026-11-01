@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * AdFit fixture generator: renders the synthetic GALI + NOA brand assets with
+ * MatchPic fixture generator: renders the synthetic GALI + NOA brand assets with
  * headless Chromium (Playwright) — GALI templates for 1:1, 4:5, 9:16, 1.91:1,
  * a GALI logo PNG, one 9:16 frame overlay, NOA templates for 1:1 and 9:16 and
  * a NOA logo PNG.

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * AdFit web app: static UI + read API + bounded live jobs.
+ * MatchPic web app: static UI + read API + bounded live jobs.
  * Binds 127.0.0.1 (nginx fronts it in production).
  *
  *   npm run web        build + start

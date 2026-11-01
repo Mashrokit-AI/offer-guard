@@ -27,8 +27,9 @@ describe('i18n', () => {
   });
 
   it('keeps the product name in exactly one place', () => {
-    expect(BRAND_NAME).toBe('AdFit');
+    expect(BRAND_NAME.length).toBeGreaterThan(0);
+    // Rename-proof: whatever the name is, no copy may hide in the strings.
     const joined = Object.values(STRINGS.en).join('\n');
-    expect(joined).not.toMatch(/AdFit/);
+    expect(joined).not.toContain(BRAND_NAME);
   });
 });

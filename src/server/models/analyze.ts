@@ -9,7 +9,7 @@ import {
 import { structuredCall, type StructuredAttempt, type StructuredOutputMode } from './spark.js';
 
 /** Bump when the prompts / JSON schema change (cache key input). */
-export const ANALYZE_PROMPT_VERSION = 'analyze-source-v2';
+export const ANALYZE_PROMPT_VERSION = 'analyze-source-v3';
 
 export const ANALYZE_SYSTEM = [
   'You are an evidence transcriber for ad creative adaptation.',
@@ -25,7 +25,7 @@ export function buildAnalyzePrompt(width: number, height: number): string {
     'Report every bounding box as pixels in this image space: {"x","y","w","h"} with (x,y) the top-left corner of a half-open box.',
     'language: the language of the printed text — "he" for Hebrew, "en" for English. direction: "rtl" for Hebrew, "ltr" for English.',
     'products: every advertised product — a short label, a one-or-two-word English noun phrase for segmentation (sam_phrase, e.g. "bottle", "coffee bag", "cup"), and its pixel bbox.',
-    'logo_bbox: the bbox of the brand logo/wordmark (mark + word together when both are visible), or null.',
+    'logo_bbox: the bbox of the brand logo/wordmark as a STANDALONE graphic element (mark + word together when both are visible) — or null. Text printed ON the product/packshot itself is NEVER the logo: leave logo_bbox null in that case and list that text under other_texts instead.',
     'headline: the main large printed line, verbatim with its bbox, bold flag and #rrggbb color sampled from the letters — or null when there is no clear headline.',
     'subtext: the secondary printed line, same shape — or null.',
     'other_texts: EVERY other printed string anywhere (taglines under the logo, disclaimers, badges), each verbatim with bbox, bold and color — empty only when nothing else is printed.',

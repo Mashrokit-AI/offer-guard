@@ -1,4 +1,4 @@
-import { api, bboxDiv, errText, h, modeBadge, qaBadge, t, type Lang } from './lib.js';
+import { api, bboxDiv, BRAND_SLUG, errText, h, modeBadge, qaBadge, t, type Lang } from './lib.js';
 import type { OutputDetailDto, PresetDto } from './dto.js';
 
 /** Load a grayscale mask PNG and paint it tinted onto a canvas overlay. */
@@ -178,7 +178,7 @@ export function outputView(lang: Lang, id: number): HTMLElement {
         regen.disabled = false;
       }
     });
-    const dl = h('a', { class: 'btn secondary', href: d.image, download: `adfit-${d.preset}.png` }, t(lang, 'btn_download')) as HTMLAnchorElement;
+    const dl = h('a', { class: 'btn secondary', href: d.image, download: `${BRAND_SLUG}-${d.preset}.png` }, t(lang, 'btn_download')) as HTMLAnchorElement;
     sections.push(h('div', { class: 'toolbar' }, regen, dl));
 
     // --- trace ---
