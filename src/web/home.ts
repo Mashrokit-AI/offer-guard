@@ -1,4 +1,5 @@
 import { api, dims, errText, fmtTime, groupByOrientation, h, modeBadge, modelFooter, presetName, qaBadge, t, type Lang, type Orientation } from './lib.js';
+import { PRESETS } from '../shared/presets.js';
 import type { BrandDto, JobDto, OutputCardDto, PresetDto } from './dto.js';
 
 interface JobRowEvent {
@@ -116,11 +117,12 @@ export function homeView(lang: Lang): HTMLElement {
   });
 
   // --- brand ---
-  const brandSel = h('select', { id: 'brand', class: 'input' }) as HTMLSelectElement;
+  // Placeholder option on first render: the select keeps its height when brands load.
+  const brandSel = h('select', { id: 'brand', class: 'input' }, h('option', { value: '' }, t(lang, 'brand_none'))) as HTMLSelectElement;
   brandSel.addEventListener('change', () => {
     state.brandId = brandSel.value;
   });
-  const matchNote = h('div', { class: 'muted small' });
+  const matchNote = h('div', { class: 'muted small match-note' });
   const autoMatch = async (f: File): Promise<void> => {
     try {
       const fd = new FormData();
@@ -211,7 +213,8 @@ export function homeView(lang: Lang): HTMLElement {
     state.running = true;
     updateGenerate();
     jobBanner.hidden = false;
-    jobBanner.scrollIntoView({ block: 'nearest' });
+    // Live results land directly under the form; bring them into view on start.
+    liveWrap.scrollIntoView({ block: 'nearest' });
     const bar = h('div', {});
     const label = h('strong', {}, t(lang, 'btn_generating', { done: 0, total }));
     jobBanner.replaceChildren(label, h('div', { class: 'progress' }, bar));
@@ -271,8 +274,8 @@ export function homeView(lang: Lang): HTMLElement {
     }
   });
 
-  // --- demo (first on the page) ---
-  const demoSec = h('section', { class: 'card demo-sec' });
+  // --- demo (last on the page; unstyled until it loads so no empty card flashes) ---
+  const demoSec = h('section', { class: 'demo-sec', id: 'demo' });
 
   // --- Meta models row ---
   const modelChip = (name: string, descKey: 'models_sam' | 'models_image' | 'models_spark', anchor: string): HTMLElement =>
@@ -286,7 +289,9 @@ export function homeView(lang: Lang): HTMLElement {
     ),
   );
 
-  const form = h('div', { class: 'card' },
+  const demoBtn = h('button', { type: 'button', class: 'btn secondary small' }, t(lang, 'btn_demo')) as HTMLButtonElement;
+  demoBtn.addEventListener('click', () => demoSec.scrollIntoView());
+  const form = h('div', { class: 'card', id: 'try-form' },
     h('h2', { class: 'try-title' }, t(lang, 'try_title')),
     h('div', { class: 'field' }, drop, fileInput),
     h('div', { class: 'formrow' },
@@ -294,9 +299,17 @@ export function homeView(lang: Lang): HTMLElement {
       h('div', { class: 'field' }, h('label', {}, t(lang, 'mode_label')), h('div', { class: 'seg' }, modeProt, modeFast)),
     ),
     h('div', { class: 'field' }, h('label', {}, t(lang, 'sizes_label')), h('div', { class: 'toolbar', style: 'margin:0 0 8px' }, allMetaBtn), chips),
-    h('div', { class: 'toolbar' }, genBtn, genHint),
+    h('div', { class: 'toolbar' }, genBtn, demoBtn, genHint),
   );
-  root.append(demoSec, modelsRow, form, jobBanner, runBar, liveWrap);
+  // Size chips render synchronously from the same static preset table the
+  // server returns, so the form's first paint is already its final height —
+  // the /api/brands reconcile below replaces identical chips (zero motion).
+  state.presets = [...PRESETS];
+  paintChips();
+  updateGenerate();
+  // Order: form → live run → models → saved demo. Everything async lands at or
+  // below the form, so nothing above the form ever changes height.
+  root.append(form, jobBanner, runBar, liveWrap, modelsRow, demoSec);
 
   // --- load brands/presets/demo ---
   void (async () => {
@@ -309,6 +322,11 @@ export function homeView(lang: Lang): HTMLElement {
       paintChips();
       updateGenerate();
     } catch {
+      // Brands unknown: drop back to the empty form plus the error note.
+      state.presets = [];
+      state.sizes.clear();
+      paintChips();
+      updateGenerate();
       form.append(h('p', { class: 'muted' }, errText(lang, new Error('load'))));
     }
     try {
@@ -317,15 +335,18 @@ export function homeView(lang: Lang): HTMLElement {
       // which proves the QA loop); anything else never ships in the fixture.
       const passed = demo.outputs.filter((o) => o.qaPass === true);
       const demoBody = h('div', {});
+      demoBody.append(groupedGrid(lang, state.presets, passed));
+      // Source leads the first group row (source → outputs); wraps on narrow.
       const firstSource = demo.sources[0];
       if (firstSource) {
         const srcCard = h('div', { class: 'ad-card source-card' },
           h('div', { class: 'thumb-frame natural' }, h('img', { src: `media/source/${firstSource}`, alt: t(lang, 'detail_before') }) as HTMLImageElement),
           h('div', { class: 'ad-card-body' }, h('div', { class: 'ad-card-reason' }, t(lang, 'detail_before'))),
         );
-        demoBody.append(h('div', { class: 'demo-source' }, srcCard));
+        const firstGrid = demoBody.querySelector('.grid');
+        if (firstGrid) firstGrid.prepend(srcCard);
+        else demoBody.prepend(srcCard);
       }
-      demoBody.append(groupedGrid(lang, state.presets, passed));
       const liveBtn = h('button', { type: 'button', class: 'btn secondary' }, t(lang, 'btn_demo_live')) as HTMLButtonElement;
       liveBtn.addEventListener('click', async () => {
         const fd = new FormData();
@@ -346,6 +367,7 @@ export function homeView(lang: Lang): HTMLElement {
           jobBanner.scrollIntoView({ block: 'nearest' });
         }
       });
+      demoSec.classList.add('card');
       demoSec.replaceChildren(
         h('h2', { style: 'margin-top:0' }, t(lang, 'btn_demo')),
         h('p', { class: 'muted', style: 'margin-top:0' }, t(lang, 'demo_saved', { time: fmtTime(lang, demo.finishedAt ?? demo.createdAt) })),

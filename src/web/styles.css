@@ -650,7 +650,9 @@ table.trace td.io { overflow-wrap: anywhere; max-width: 340px; }
 .small { font-size: 13px; }
 
 /* --- MatchPic: size chips --- */
-.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+/* min-height reserves the chips' space so Generate never moves when presets load. */
+.chips { display: flex; gap: 8px; flex-wrap: wrap; min-height: 78px; align-content: flex-start; }
+.match-note { min-height: 20px; }
 .chipbtn {
   font: inherit;
   font-size: 13.5px;
@@ -699,9 +701,8 @@ img.masklayer, canvas.masklayer { position: absolute; inset: 0; width: 100%; hei
 .grid.cols-landscape { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 .grid.cols-vertical { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 
-/* --- MatchPic: demo-first home --- */
+/* --- MatchPic: form-first home --- */
 .demo-sec { margin-top: 18px; }
-.demo-source { max-width: 280px; margin-bottom: 4px; }
 .models-row {
   display: flex;
   gap: 6px 16px;
@@ -729,6 +730,6 @@ img.masklayer, canvas.masklayer { position: absolute; inset: 0; width: 100%; hei
 @media (max-width: 560px) {
   .grid.cols-vertical { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .grid.cols-landscape { grid-template-columns: 1fr; }
-  .demo-source { max-width: 220px; }
+  .chips { min-height: 152px; }
   .model-footer { font-size: 11px; }
 }
