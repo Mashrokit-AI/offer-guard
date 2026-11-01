@@ -1,21 +1,16 @@
 {
-  "name": "offer-guard",
+  "name": "adfit",
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Offer Guard — verify ad promises against the approved offer (Meta hackathon)",
+  "description": "AdFit — one creative to every placement size, with Meta's models (Meta hackathon)",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "probe:meta": "tsx scripts/probe-meta-write.ts",
-    "cleanup:probe": "tsx scripts/cleanup-probe.ts",
-    "killtest:spark": "tsx scripts/killtest-spark.ts",
-    "killtest:sam": "tsx scripts/killtest-sam.ts",
-    "killtest:repair": "tsx scripts/killtest-repair.ts",
-    "render:fixtures": "tsx scripts/render-fixtures.ts",
-    "sweep": "tsx scripts/sweep.ts",
-    "seed:campaign": "tsx scripts/seed-campaign.ts",
+    "render:adfit-fixtures": "tsx scripts/render-adfit-fixtures.ts",
+    "adfit:live": "tsx scripts/adfit-live.ts",
+    "ui-shots": "tsx scripts/ui-shots.ts",
     "build:web": "tsx scripts/build-web.ts",
     "web": "npm run build:web && tsx src/server/http/server.ts",
     "web:dev": "tsx scripts/build-web.ts --watch",

@@ -1,0 +1,43 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.702,
+      "y": 0.053,
+      "w": 0.208,
+      "h": 0.058
+    },
+    "corner": "top-right"
+  },
+  "headline_zone": {
+    "x": 0.11,
+    "y": 0.785,
+    "w": 0.78,
+    "h": 0.055
+  },
+  "subtext_zone": {
+    "x": 0.272,
+    "y": 0.852,
+    "w": 0.456,
+    "h": 0.032
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.083,
+      "y": 0.777,
+      "w": 0.834,
+      "h": 0.132
+    },
+    "color": "#f65a3a",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.379,
+    "y": 0.194,
+    "w": 0.242,
+    "h": 0.52
+  },
+  "frames": [],
+  "background_style": "flat solid pale mint-teal fill around #cfe7e2 with subtle central lightening, smooth matte no texture",
+  "text_align": "center",
+  "direction": "rtl"
+}

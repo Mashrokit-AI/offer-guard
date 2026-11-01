@@ -1,0 +1,6 @@
+{
+  "_note": "Verbatim texts that must survive adaptation per fixture source. Local only — never sent to a model (tests compare against pipeline outputs).",
+  "gali-he": ["20% הנחה על דגמים נבחרים", "בתוקף עד 10.11 · משלוח בתשלום"],
+  "gali-en": ["20% off selected models", "Valid until 10.11 · paid shipping"],
+  "noa": ["טרי מהקליה", "250 גרם · 89 ש״ח"]
+}

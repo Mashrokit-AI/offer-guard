@@ -1,190 +1,183 @@
 import type OpenAI from 'openai';
 import { buildBoxPromptText, segment } from '../models/sam.js';
-import {
-  countMaskInRect,
-  dilateMask,
-  maskArea,
-  maskBoundingBox,
-  unionMasks,
-  type PixelBox,
-} from '../../shared/geometry.js';
+import { maskArea, maskBoundingBox, unionMasks, type PixelBox } from '../../shared/geometry.js';
+import type { RgbaImage } from './composite.js';
 
-export interface ProtectionInput {
+export const DILATE_PX = 4;
+/** A mask whose fill inside its own bbox is below this is unusable. */
+export const TINY_MASK_FILL = 0.2;
+
+export interface MaskTarget {
+  /** Stable id, e.g. "product-0" or "logo". */
+  id: string;
+  /** Noun phrase for the SAM phrase prompt, e.g. "bottle". */
+  phrase: string;
+  /** Spark box for the box prompt, or null for phrase-only. */
+  box: PixelBox | null;
+}
+
+export interface MasksInput {
   imageBytes: Buffer;
   mimeType: string;
   width: number;
   height: number;
   model: string;
-  sparkProductBox: PixelBox | null;
-  sparkLogoBox: PixelBox | null;
-  /**
-   * Kill-test-only fallback geometry (labeled as "fixture geometry" when used).
-   * Production callers omit this: with no Spark box and no phrase hit, the
-   * mask stays empty and the repair is refused.
-   */
-  fallbackProductBox?: PixelBox;
-  fallbackLogoBox?: PixelBox;
+  targets: MaskTarget[];
 }
 
-export interface ProtectionResult {
-  product: Uint8Array;
-  logo: Uint8Array;
-  /** dilate(union(product, logo), 4) */
-  protected: Uint8Array;
+export interface MasksResult {
+  masks: Map<string, Uint8Array>;
   blockers: string[];
-  labels: { product: string; logo: string[] };
+  labels: Record<string, string>;
   latencyMs: number;
   calls: number;
 }
 
-export const PRODUCT_PHRASE = 'bottle';
-export const LOGO_PHRASE = 'logo';
-export const DILATE_PX = 4;
-/** A protected mask whose fill inside its own bbox is below this is unusable. */
-export const TINY_MASK_FILL = 0.2;
-
-function usableBox(b: PixelBox | null | undefined): b is PixelBox {
+function usableBox(b: PixelBox | null): b is PixelBox {
   return !!b && Number.isFinite(b.x) && Number.isFinite(b.y) && b.w > 0 && b.h > 0;
 }
 
-interface MaskCall {
-  mask: Uint8Array;
-  latencyMs: number;
-}
-
-async function phraseMask(
-  client: OpenAI,
-  input: ProtectionInput,
-  phrase: string,
-): Promise<MaskCall> {
-  const seg = await segment(client, {
-    imageBytes: input.imageBytes,
-    mimeType: input.mimeType,
-    width: input.width,
-    height: input.height,
-    model: input.model,
-    inputText: phrase,
-  });
-  return { mask: seg.mask, latencyMs: seg.latencyMs };
-}
-
-async function boxMask(
-  client: OpenAI,
-  input: ProtectionInput,
-  box: PixelBox,
-): Promise<MaskCall> {
-  const seg = await segment(client, {
-    imageBytes: input.imageBytes,
-    mimeType: input.mimeType,
-    width: input.width,
-    height: input.height,
-    model: input.model,
-    inputText: buildBoxPromptText(box, input.width, input.height),
-  });
-  return { mask: seg.mask, latencyMs: seg.latencyMs };
-}
-
 /**
- * Build the protected mask: SAM "bottle" for the product, and for the logo
- * the union of the "logo" phrase mask (circle mark) with a box prompt on
- * Spark's logo_bbox (the wordmark the phrase misses). `protected` is the
- * union dilated by 4 px. Empty/tiny results are blockers, never silent.
+ * Segment one target: the union of the phrase mask with a box prompt on
+ * Spark's box (the phrase alone misses parts — e.g. "logo" sees the circle
+ * mark but not the wordmark). Phrase-only when no box is known.
  */
-export async function buildProtectedMask(
+export async function segmentTarget(
   client: OpenAI,
-  input: ProtectionInput,
-): Promise<ProtectionResult> {
-  const { width, height } = input;
-  let calls = 0;
-  let latencyMs = 0;
-
-  // Product: phrase first, box prompt when the phrase finds nothing.
-  const productCall = await phraseMask(client, input, PRODUCT_PHRASE);
-  calls++;
-  latencyMs += productCall.latencyMs;
-  let product = productCall.mask;
-  let productLabel = `phrase "${PRODUCT_PHRASE}"`;
-  const productBox = usableBox(input.sparkProductBox)
-    ? { box: input.sparkProductBox, source: 'spark' as const }
-    : usableBox(input.fallbackProductBox)
-      ? { box: input.fallbackProductBox, source: 'fixture geometry' as const }
-      : null;
-  if (maskArea(product) === 0 && productBox) {
-    const boxCall = await boxMask(client, input, productBox.box);
-    calls++;
-    latencyMs += boxCall.latencyMs;
-    product = boxCall.mask;
-    productLabel = `box from ${productBox.source} ${JSON.stringify(productBox.box)} (phrase empty)`;
-  }
-
-  // Logo: ALWAYS the union of phrase + box prompt (phrase sees the circle
-  // mark only, not the wordmark).
-  const logoCall = await phraseMask(client, input, LOGO_PHRASE);
-  calls++;
-  latencyMs += logoCall.latencyMs;
-  let logo = logoCall.mask;
-  const logoLabels = [`phrase "${LOGO_PHRASE}"`];
-  const logoBox = usableBox(input.sparkLogoBox)
-    ? { box: input.sparkLogoBox, source: 'spark' as const }
-    : usableBox(input.fallbackLogoBox)
-      ? { box: input.fallbackLogoBox, source: 'fixture geometry' as const }
-      : null;
-  if (logoBox) {
-    const boxCall = await boxMask(client, input, logoBox.box);
-    calls++;
-    latencyMs += boxCall.latencyMs;
-    logo = unionMasks(logo, boxCall.mask);
-    logoLabels.push(`box from ${logoBox.source} ${JSON.stringify(logoBox.box)}`);
-  }
-
-  const prot = dilateMask(unionMasks(product, logo), width, height, DILATE_PX);
-  const blockers = protectionBlockers(product, logo, width, height);
-
-  return {
-    product,
-    logo,
-    protected: prot,
-    blockers,
-    labels: { product: productLabel, logo: logoLabels },
-    latencyMs,
-    calls,
+  input: MasksInput,
+  target: MaskTarget,
+): Promise<{ mask: Uint8Array; labels: string[]; calls: number; latencyMs: number }> {
+  const base = {
+    imageBytes: input.imageBytes,
+    mimeType: input.mimeType,
+    width: input.width,
+    height: input.height,
+    model: input.model,
   };
+  const phrase = await segment(client, { ...base, inputText: target.phrase });
+  let mask = phrase.mask;
+  let calls = 1;
+  let latencyMs = phrase.latencyMs;
+  const labels = [`phrase "${target.phrase}"`];
+  if (usableBox(target.box)) {
+    const boxed = await segment(client, { ...base, inputText: buildBoxPromptText(target.box, input.width, input.height) });
+    calls++;
+    latencyMs += boxed.latencyMs;
+    mask = unionMasks(mask, boxed.mask);
+    labels.push(`box ${JSON.stringify(target.box)}`);
+  }
+  return { mask, labels, calls, latencyMs };
 }
 
 /**
- * Quality gates for the two protection targets. Each target is judged on its
- * OWN bbox fill — never on the union bbox, which is inherently sparse when
- * product and logo sit far apart (the wordmark widens the logo bbox without
- * adding much area, and must not read as "tiny").
+ * Quality gates per target. Each target is judged on its OWN bbox fill —
+ * never on a union bbox, which is inherently sparse when elements sit far
+ * apart. Empty/tiny results are blockers, never silent.
  */
-export function protectionBlockers(
-  product: Uint8Array,
-  logo: Uint8Array,
-  width: number,
-  height: number,
-): string[] {
+export function maskBlockers(masks: Map<string, Uint8Array>, width: number, height: number): string[] {
   const blockers: string[] = [];
-  if (maskArea(product) === 0 || maskArea(logo) === 0) {
-    blockers.push('protected_mask_empty');
-    return blockers;
-  }
-  for (const mask of [product, logo]) {
+  for (const [id, mask] of masks) {
+    if (maskArea(mask) === 0) {
+      blockers.push(`mask_empty:${id}`);
+      continue;
+    }
     const box = maskBoundingBox(mask, width, height);
     const fill = box ? maskArea(mask) / (box.w * box.h) : 0;
-    if (fill < TINY_MASK_FILL) {
-      blockers.push('protected_mask_tiny');
-      return blockers;
-    }
+    if (fill < TINY_MASK_FILL) blockers.push(`mask_tiny:${id}`);
   }
   return blockers;
 }
 
-/** Pixels of the protected mask inside the edit rectangle (must be 0). */
-export function protectedOverlapPx(
-  prot: Uint8Array,
-  width: number,
-  height: number,
-  rect: PixelBox,
-): number {
-  return countMaskInRect(prot, width, height, rect);
+/**
+ * Complete a logo mask by contrast. SAM sometimes returns only part of a
+ * lockup (the mark but half the wordmark). Logos are high-contrast graphics,
+ * so within Spark's logo box we add every pixel that differs strongly from
+ * the box background — but only within `dilatePx` of the SAM core, so far
+ * background texture can never join. Returns the grown mask.
+ */
+export function growLogoMask(rgba: RgbaImage, mask: Uint8Array, box: PixelBox, dilatePx = 25, threshold = 48): Uint8Array {
+  const { width: W, height: H } = rgba;
+  const x1 = Math.max(0, Math.min(W - 1, Math.round(box.x)));
+  const y1 = Math.max(0, Math.min(H - 1, Math.round(box.y)));
+  const x2 = Math.max(x1 + 1, Math.min(W, Math.round(box.x + box.w)));
+  const y2 = Math.max(y1 + 1, Math.min(H, Math.round(box.y + box.h)));
+  // Background = median of the box border pixels (the lockup never touches all four borders).
+  const border: Array<[number, number]> = [];
+  for (let x = x1; x < x2; x++) {
+    border.push([x, y1], [x, y2 - 1]);
+  }
+  for (let y = y1 + 1; y < y2 - 1; y++) {
+    border.push([x1, y], [x2 - 1, y]);
+  }
+  const chan = (c: number): number => {
+    const vals = border.map(([x, y]) => rgba.data[(y * W + x) * 4 + c] as number).sort((a, b) => a - b);
+    return vals[Math.floor(vals.length / 2)] ?? 255;
+  };
+  const bg: [number, number, number] = [chan(0), chan(1), chan(2)];
+  const isInk = (x: number, y: number): boolean => {
+    const o = (y * W + x) * 4;
+    return (
+      Math.abs((rgba.data[o] as number) - bg[0]) > threshold ||
+      Math.abs((rgba.data[o + 1] as number) - bg[1]) > threshold ||
+      Math.abs((rgba.data[o + 2] as number) - bg[2]) > threshold
+    );
+  };
+  // BFS outward from SAM core pixels, bounded by dilatePx and the box.
+  const out = Uint8Array.from(mask);
+  const depth = new Int16Array(W * H).fill(-1);
+  const queue: number[] = [];
+  for (let y = y1; y < y2; y++) {
+    for (let x = x1; x < x2; x++) {
+      if (mask[y * W + x]) {
+        depth[y * W + x] = 0;
+        queue.push(y * W + x);
+      }
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const i = queue[head++] as number;
+    const d = depth[i] as number;
+    if (d >= dilatePx) continue;
+    const x = i % W;
+    const y = Math.floor(i / W);
+    const neighbors = [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ];
+    for (const [nx, ny] of neighbors) {
+      if (nx < x1 || nx >= x2 || ny < y1 || ny >= y2) continue;
+      const ni = ny * W + nx;
+      if (depth[ni] !== -1) continue;
+      depth[ni] = d + 1;
+      if (!out[ni] && isInk(nx, ny)) {
+        out[ni] = 1;
+        queue.push(ni);
+      } else if (out[ni]) {
+        queue.push(ni);
+      }
+      // Non-ink pixels are traversed (depth recorded) but never added, so
+      // the grow can cross small gaps between letters.
+      if (!out[ni] && !isInk(nx, ny)) queue.push(ni);
+    }
+  }
+  return out;
+}
+
+/** Segment every target; see segmentTarget for the phrase+box union rule. */
+export async function segmentTargets(client: OpenAI, input: MasksInput): Promise<MasksResult> {
+  const masks = new Map<string, Uint8Array>();
+  const labels: Record<string, string> = {};
+  let calls = 0;
+  let latencyMs = 0;
+  for (const target of input.targets) {
+    const r = await segmentTarget(client, input, target);
+    masks.set(target.id, r.mask);
+    labels[target.id] = r.labels.join(' + ');
+    calls += r.calls;
+    latencyMs += r.latencyMs;
+  }
+  return { masks, blockers: maskBlockers(masks, input.width, input.height), labels, latencyMs, calls };
 }

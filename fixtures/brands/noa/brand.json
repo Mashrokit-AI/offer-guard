@@ -1,0 +1,11 @@
+{
+  "id": "noa",
+  "name": "NOA",
+  "colors": ["#4a2f22", "#d97b3f", "#f5efe4", "#e8b04b"],
+  "fonts": [],
+  "logo": "logo.png",
+  "templates": [
+    { "id": "tpl-noa-ig-11", "preset": "ig-feed-11", "image": "tpl-1x1.png", "spec": "spec-1x1.json" },
+    { "id": "tpl-noa-story", "preset": "ig-story-916", "image": "tpl-9x16.png", "spec": "spec-9x16.json" }
+  ]
+}

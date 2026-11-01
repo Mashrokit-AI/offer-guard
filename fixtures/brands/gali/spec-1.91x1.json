@@ -1,0 +1,43 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.31,
+      "y": 0.345,
+      "w": 0.145,
+      "h": 0.07
+    },
+    "corner": "other"
+  },
+  "headline_zone": {
+    "x": 0.71,
+    "y": 0.545,
+    "w": 0.185,
+    "h": 0.075
+  },
+  "subtext_zone": {
+    "x": 0.725,
+    "y": 0.435,
+    "w": 0.17,
+    "h": 0.045
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.418,
+      "y": 0.508,
+      "w": 0.498,
+      "h": 0.152
+    },
+    "color": "#f04e3a",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.105,
+    "y": 0.093,
+    "w": 0.115,
+    "h": 0.625
+  },
+  "frames": [],
+  "background_style": "flat pale mint aqua fill around #d7ece9 with subtle lighter center glow, no texture",
+  "text_align": "start",
+  "direction": "rtl"
+}

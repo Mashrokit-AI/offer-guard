@@ -1,46 +1,53 @@
 import { randomBytes } from 'node:crypto';
-import type { SweepRow } from '../workflow/sweep.js';
 
 /**
- * One heavy job at a time (fresh sweep or own-ad check), bounded queue,
- * per-IP hourly rate limit, SSE fan-out with replay. All in-memory: the
- * server is a single process and jobs are short-lived demo runs.
+ * One heavy job at a time (a generation job), bounded queue, per-IP hourly
+ * rate limit, SSE fan-out with replay. All in-memory: the server is a single
+ * process and jobs are short-lived demo runs.
  */
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
+
+/** One finished output inside a job (a source × size cell). */
+export interface JobRow {
+  outputId: number;
+  sourceId: string;
+  sourceIndex: number;
+  preset: string;
+  status: 'pass' | 'needs_review' | 'failed';
+  retries: number;
+  error?: string;
+}
 
 export interface JobProgressEvent {
   type: 'progress';
   done: number;
   total: number;
-  row: SweepRow;
+  row: JobRow;
 }
 
 export interface JobTerminalEvent {
   type: 'done' | 'failed';
   done: number;
   total: number;
-  snapshotId?: number;
-  cached?: boolean;
+  jobId?: string;
   error?: string;
 }
 
 export type JobEvent = JobProgressEvent | JobTerminalEvent;
 
 export interface JobResult {
-  snapshotId?: number;
-  cached?: boolean;
+  jobId?: string;
 }
 
 export interface Job {
   id: string;
-  kind: 'fresh' | 'check';
+  kind: 'generate' | 'regenerate' | 'demo-live';
   status: JobStatus;
   total: number;
   done: number;
-  rows: SweepRow[];
-  snapshotId?: number;
-  cached?: boolean;
+  rows: JobRow[];
+  jobId?: string;
   errorKey?: string;
   log: JobEvent[];
   listeners: Set<(e: JobEvent) => void>;
@@ -49,13 +56,12 @@ export interface Job {
 
 export interface JobSummary {
   id: string;
-  kind: 'fresh' | 'check';
+  kind: 'generate' | 'regenerate' | 'demo-live';
   status: JobStatus;
   total: number;
   done: number;
-  rows: SweepRow[];
-  snapshotId?: number;
-  cached?: boolean;
+  rows: JobRow[];
+  jobId?: string;
   error?: string;
 }
 
@@ -67,8 +73,7 @@ export function summarize(job: Job): JobSummary {
     total: job.total,
     done: job.done,
     rows: [...job.rows],
-    snapshotId: job.snapshotId,
-    cached: job.cached,
+    jobId: job.jobId,
     error: job.errorKey,
   };
 }
@@ -117,14 +122,14 @@ export class JobManager {
   }
 
   /**
-   * Submit a heavy task. The task runs `onRow` per finished ad and resolves
-   * with the resulting snapshot id (single-check jobs). Returns null when
-   * the server is busy (running + queue full).
+   * Submit a heavy task. The task runs `onRow` per finished output and
+   * resolves with the resulting store job id. Returns null when the server
+   * is busy (running + queue full).
    */
   submit(
-    kind: 'fresh' | 'check',
+    kind: Job['kind'],
     total: number,
-    task: (onRow: (row: SweepRow) => void) => Promise<JobResult>,
+    task: (onRow: (row: JobRow) => void) => Promise<JobResult>,
   ): Job | null {
     if (this.running && this.waiting.length >= this.opts.queueMax) return null;
     const now = this.opts.now ?? Date.now;
@@ -152,7 +157,7 @@ export class JobManager {
     return job;
   }
 
-  onRow(job: Job, row: SweepRow): void {
+  onRow(job: Job, row: JobRow): void {
     job.done += 1;
     job.rows.push(row);
     this.emit(job, { type: 'progress', done: job.done, total: job.total, row });
@@ -172,8 +177,7 @@ export class JobManager {
   private finish(job: Job, event: JobTerminalEvent): void {
     if (event.type === 'done') {
       job.status = 'done';
-      job.snapshotId = event.snapshotId;
-      job.cached = event.cached;
+      job.jobId = event.jobId;
     } else {
       job.status = 'failed';
       job.errorKey = event.error ?? 'err_job_failed';
@@ -183,13 +187,13 @@ export class JobManager {
     const next = this.waiting.shift();
     if (next) {
       next.status = 'running';
-      void this.execute(next, (next as unknown as { task: (onRow: (r: SweepRow) => void) => Promise<JobResult> }).task);
+      void this.execute(next, (next as unknown as { task: (onRow: (r: JobRow) => void) => Promise<JobResult> }).task);
     }
   }
 
   private async execute(
     job: Job,
-    task: (onRow: (row: SweepRow) => void) => Promise<JobResult>,
+    task: (onRow: (row: JobRow) => void) => Promise<JobResult>,
   ): Promise<void> {
     // Stash the task so finish() can start queued jobs generically.
     (job as unknown as { task: typeof task }).task = task;
@@ -210,7 +214,7 @@ export class JobManager {
       const result = await task((row) => this.onRow(job, row));
       if (timedOut) return;
       clearTimeout(timer);
-      this.finish(job, { type: 'done', done: job.done, total: job.total, snapshotId: result.snapshotId, cached: result.cached });
+      this.finish(job, { type: 'done', done: job.done, total: job.total, jobId: result.jobId });
     } catch {
       if (timedOut) return;
       clearTimeout(timer);

@@ -1,0 +1,17 @@
+{
+  "id": "gali",
+  "name": "GALI",
+  "colors": ["#0f4c5c", "#7fd3c4", "#ff5a3c", "#e8fbf7"],
+  "fonts": [],
+  "logo": "logo.png",
+  "templates": [
+    { "id": "tpl-gali-ig-11", "preset": "ig-feed-11", "image": "tpl-1x1.png", "spec": "spec-1x1.json" },
+    { "id": "tpl-gali-ig-45", "preset": "ig-feed-45", "image": "tpl-4x5.png", "spec": "spec-4x5.json" },
+    { "id": "tpl-gali-story", "preset": "ig-story-916", "image": "tpl-9x16.png", "spec": "spec-9x16.json", "frame": "frame-9x16.png" },
+    { "id": "tpl-gali-tiktok", "preset": "tiktok-916", "image": "tpl-9x16.png", "spec": "spec-9x16.json", "frame": "frame-9x16.png" },
+    { "id": "tpl-gali-fb-feed", "preset": "fb-feed", "image": "tpl-1x1.png", "spec": "spec-1x1.json" },
+    { "id": "tpl-gali-fb-link", "preset": "fb-link", "image": "tpl-1.91x1.png", "spec": "spec-1.91x1.json" },
+    { "id": "tpl-gali-li", "preset": "li-post", "image": "tpl-1.91x1.png", "spec": "spec-1.91x1.json" },
+    { "id": "tpl-gali-yt", "preset": "yt-thumb", "image": "tpl-1.91x1.png", "spec": "spec-1.91x1.json" }
+  ]
+}

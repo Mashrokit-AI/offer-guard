@@ -3,7 +3,20 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { chromium, type Page } from 'playwright';
 import type { AdLanguage } from '../../shared/schemas.js';
-import type { Rgb } from './panel.js';
+
+/** sRGB color triple, 0-255 per channel. */
+export interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** Parse a #rrggbb string (throws on anything else). */
+export function rgbFromHex(hex: string): Rgb {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m?.[1]) throw new Error(`not a #rrggbb color: ${JSON.stringify(hex)}`);
+  return { r: parseInt(m[1].slice(0, 2), 16), g: parseInt(m[1].slice(2, 4), 16), b: parseInt(m[1].slice(4, 6), 16) };
+}
 
 /**
  * Minimal browser-document shape for page.evaluate callbacks only (this
@@ -92,7 +105,7 @@ export function cssColor(c: Rgb): string {
   return `rgb(${c.r},${c.g},${c.b})`;
 }
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
@@ -199,6 +212,105 @@ export async function renderPanel(input: RenderInput): Promise<RenderResult> {
 
     const png = await page.screenshot({ type: 'png', omitBackground: true });
     return { png, mainPx, subPx, fontStack: stack };
+  } finally {
+    await browser.close();
+  }
+}
+
+// --- free-text blocks (AdFit protected mode) ---
+
+export interface TextLine {
+  text: string;
+  /** Starting font size; shrinks to fit, never grows. */
+  px: number;
+  weight: 400 | 700;
+  color: Rgb;
+}
+
+export interface TextBlockInput {
+  width: number;
+  height: number;
+  lines: TextLine[];
+  lang: AdLanguage;
+  align: 'start' | 'center' | 'end';
+}
+
+export interface TextBlockResult {
+  png: Buffer;
+  sizes: number[];
+  fontStack: string;
+}
+
+export const MIN_TEXT_PX = 18;
+
+export function buildTextBlockHtml(input: TextBlockInput & { fontCss: string; sizes: number[] }): string {
+  const dir = input.lang === 'he' ? 'rtl' : 'ltr';
+  const stack = fontStackFor(input.lang);
+  const align = input.align === 'start' ? 'start' : input.align === 'end' ? 'end' : 'center';
+  const lines = input.lines
+    .map((l, i) => {
+      const size = input.sizes[i] ?? l.px;
+      return `<p class="tline" style="font-size:${size}px;font-weight:${l.weight};color:${cssColor(l.color)}">${isolateNumerals(escapeHtml(l.text))}</p>`;
+    })
+    .join('');
+  return `<!DOCTYPE html>
+<html lang="${input.lang}" dir="${dir}">
+<head>
+<meta charset="utf-8">
+<style>
+${input.fontCss}
+html,body{margin:0;padding:0;width:${input.width}px;height:${input.height}px;}
+.block{width:${input.width}px;height:${input.height}px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;overflow:hidden;box-sizing:border-box;}
+.tline{font-family:${stack};line-height:1.2;margin:0;text-align:${align};white-space:pre-wrap;overflow-wrap:break-word;}
+</style>
+</head>
+<body>
+<div class="block">${lines}</div>
+</body>
+</html>`;
+}
+
+async function blockOverflows(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const el = document.querySelector('.block');
+    if (!el) return true;
+    return el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
+  });
+}
+
+/**
+ * Render verbatim free text on a transparent canvas in Chromium (Playwright):
+ * viewport exactly the target size, deviceScaleFactor 1. Text stays in
+ * logical string order (never reversed), numerals are bidi-isolated.
+ * Shrinks all lines proportionally until nothing overflows; below MIN_TEXT_PX
+ * the render is refused with `text_does_not_fit` instead of clipped text.
+ */
+export async function renderTextBlock(input: TextBlockInput): Promise<TextBlockResult> {
+  const fontCss = await loadFontCss();
+  const stack = fontStackFor(input.lang);
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({
+      viewport: { width: input.width, height: input.height },
+      deviceScaleFactor: 1,
+    });
+    let sizes = input.lines.map((l) => l.px);
+    await page.setContent(buildTextBlockHtml({ ...input, fontCss, sizes }), { waitUntil: 'load' });
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    for (;;) {
+      if (!(await blockOverflows(page))) break;
+      const next = sizes.map((s) => s - 2);
+      if (next.some((s) => s < MIN_TEXT_PX)) {
+        throw new RenderBlocker(
+          `free text overflows a ${input.width}x${input.height} box at the minimum size (${MIN_TEXT_PX}px)`,
+        );
+      }
+      sizes = next;
+      await page.setContent(buildTextBlockHtml({ ...input, fontCss, sizes }), { waitUntil: 'load' });
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    }
+    const png = await page.screenshot({ type: 'png', omitBackground: true });
+    return { png, sizes, fontStack: stack };
   } finally {
     await browser.close();
   }

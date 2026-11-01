@@ -1,0 +1,43 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.665,
+      "y": 0.045,
+      "w": 0.22,
+      "h": 0.05
+    },
+    "corner": "top-right"
+  },
+  "headline_zone": {
+    "x": 0.12,
+    "y": 0.81,
+    "w": 0.76,
+    "h": 0.06
+  },
+  "subtext_zone": {
+    "x": 0.24,
+    "y": 0.858,
+    "w": 0.52,
+    "h": 0.03
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.08,
+      "y": 0.79,
+      "w": 0.84,
+      "h": 0.135
+    },
+    "color": "#f75d3f",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.344,
+    "y": 0.215,
+    "w": 0.213,
+    "h": 0.455
+  },
+  "frames": [],
+  "background_style": "smooth vertical gradient from off-white pale gray at top to light mint-aqua at bottom, flat with soft shadow under bottle",
+  "text_align": "center",
+  "direction": "rtl"
+}

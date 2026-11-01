@@ -1,0 +1,55 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.345,
+      "y": 0.068,
+      "w": 0.31,
+      "h": 0.05
+    },
+    "corner": "other"
+  },
+  "headline_zone": {
+    "x": 0.25,
+    "y": 0.23,
+    "w": 0.5,
+    "h": 0.045
+  },
+  "subtext_zone": {
+    "x": 0.34,
+    "y": 0.29,
+    "w": 0.32,
+    "h": 0.025
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.093,
+      "y": 0.842,
+      "w": 0.814,
+      "h": 0.094
+    },
+    "color": "#d67a3d",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.342,
+    "y": 0.367,
+    "w": 0.316,
+    "h": 0.233
+  },
+  "frames": [
+    {
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.215
+      },
+      "color": "#4a2e21",
+      "edge": "top",
+      "kind": "band"
+    }
+  ],
+  "background_style": "solid light cream beige field with solid dark-brown header band on top, flat matte no gradient",
+  "text_align": "center",
+  "direction": "rtl"
+}

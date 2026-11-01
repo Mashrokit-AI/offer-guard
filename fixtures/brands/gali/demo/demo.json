@@ -1,0 +1,2065 @@
+{
+  "brand": "gali",
+  "mode": "protected",
+  "finishedAt": "2026-11-01T12:20:11.100Z",
+  "modelCalls": 52,
+  "imageCalls": 12,
+  "outputs": [
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "ig-feed-11",
+      "mode": "protected",
+      "status": "pass",
+      "image": "ig-feed-11.png",
+      "plan": {
+        "preset": "ig-feed-11",
+        "width": 1080,
+        "height": 1080,
+        "from_template": true,
+        "template_id": "tpl-gali-ig-11",
+        "safe": {
+          "x": 43,
+          "y": 43,
+          "w": 994,
+          "h": 994
+        },
+        "logo": {
+          "x": 758,
+          "y": 58,
+          "w": 225,
+          "h": 61
+        },
+        "products": [
+          {
+            "x": 438,
+            "y": 210,
+            "w": 203,
+            "h": 562
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 90,
+          "y": 839,
+          "w": 901,
+          "h": 143
+        },
+        "other_texts": [
+          {
+            "x": 711,
+            "y": 145,
+            "w": 279,
+            "h": 30
+          }
+        ],
+        "product_scales": [
+          1.0053667262969588
+        ],
+        "logo_scale": 1.0180995475113122,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 1.0053667262969588,
+          "core_differ": 0,
+          "core_total": 97360,
+          "feather_total": 3242,
+          "pass": true
+        },
+        "logo": {
+          "scale": 1.0180995475113122,
+          "core_differ": 0,
+          "core_total": 4293,
+          "feather_total": 1730,
+          "pass": true
+        },
+        "panel": {
+          "scale": 0.8411764705882353,
+          "core_differ": 0,
+          "core_total": 108251,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": true,
+        "reasons": [],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": true,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 0,
+      "modelCalls": 6,
+      "imageCalls": 1,
+      "latencyMs": 27525,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "ig-feed-11 protected template=tpl-gali-ig-11",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 0,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1080x1080",
+          "output_summary": "wire bytes=1403734",
+          "duration_ms": 12841,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.005x logo@1.018x panel@0.841x + text(other-0)",
+          "output_summary": "1080x1080 ok",
+          "duration_ms": 352,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/97360 logo:0/4293 panel:0/108251 feather outside core only",
+          "duration_ms": 46,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1080x1080 output",
+          "output_summary": "PASS",
+          "duration_ms": 14284,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "done",
+          "cached": false,
+          "seq": 7
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "ig-feed-45",
+      "mode": "protected",
+      "status": "pass",
+      "image": "ig-feed-45.png",
+      "plan": {
+        "preset": "ig-feed-45",
+        "width": 1080,
+        "height": 1350,
+        "from_template": true,
+        "template_id": "tpl-gali-ig-45",
+        "safe": {
+          "x": 43,
+          "y": 54,
+          "w": 994,
+          "h": 1215
+        },
+        "logo": {
+          "x": 718,
+          "y": 63,
+          "w": 238,
+          "h": 65
+        },
+        "products": [
+          {
+            "x": 376,
+            "y": 290,
+            "w": 222,
+            "h": 614
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 86,
+          "y": 1067,
+          "w": 907,
+          "h": 182
+        },
+        "other_texts": [
+          {
+            "x": 711,
+            "y": 181,
+            "w": 279,
+            "h": 38
+          }
+        ],
+        "product_scales": [
+          1.0983899821109124
+        ],
+        "logo_scale": 1.0769230769230769,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 1.0983899821109124,
+          "core_differ": 0,
+          "core_total": 116479,
+          "feather_total": 3554,
+          "pass": true
+        },
+        "logo": {
+          "scale": 1.0769230769230769,
+          "core_differ": 0,
+          "core_total": 4928,
+          "feather_total": 1852,
+          "pass": true
+        },
+        "panel": {
+          "scale": 1.0077777777777779,
+          "core_differ": 0,
+          "core_total": 155097,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": true,
+        "reasons": [],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": true,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 0,
+      "modelCalls": 6,
+      "imageCalls": 1,
+      "latencyMs": 28564,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "ig-feed-45 protected template=tpl-gali-ig-45",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 0,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1080x1350",
+          "output_summary": "wire bytes=923016",
+          "duration_ms": 11959,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.098x logo@1.077x panel@1.008x + text(other-0)",
+          "output_summary": "1080x1350 ok",
+          "duration_ms": 899,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/116479 logo:0/4928 panel:0/155097 feather outside core only",
+          "duration_ms": 59,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1080x1350 output",
+          "output_summary": "PASS",
+          "duration_ms": 15644,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "done",
+          "cached": false,
+          "seq": 7
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "ig-story-916",
+      "mode": "protected",
+      "status": "needs_review",
+      "image": "ig-story-916.png",
+      "plan": {
+        "preset": "ig-story-916",
+        "width": 1080,
+        "height": 1920,
+        "from_template": true,
+        "template_id": "tpl-gali-story",
+        "safe": {
+          "x": 54,
+          "y": 269,
+          "w": 972,
+          "h": 1382
+        },
+        "logo": {
+          "x": 538,
+          "y": 1650,
+          "w": 4,
+          "h": 1
+        },
+        "products": [
+          {
+            "x": 391,
+            "y": 510,
+            "w": 255,
+            "h": 706
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 108,
+          "y": 1309,
+          "w": 864,
+          "h": 144
+        },
+        "other_texts": [
+          {
+            "x": 711,
+            "y": 269,
+            "w": 279,
+            "h": 53
+          }
+        ],
+        "product_scales": [
+          1.2623762376237624
+        ],
+        "logo_scale": 0.016666666666666666,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 1.2623762376237624,
+          "core_differ": 0,
+          "core_total": 154651,
+          "feather_total": 4069,
+          "pass": true
+        },
+        "logo": {
+          "scale": 0.016666666666666666,
+          "core_differ": 0,
+          "core_total": 0,
+          "feather_total": 0,
+          "pass": false
+        },
+        "panel": {
+          "scale": 0.8470588235294118,
+          "core_differ": 0,
+          "core_total": 109728,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": false,
+        "reasons": [
+          "Logo present in source (GALI icon + wordmark top-right) is missing in output"
+        ],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": false,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 1,
+      "modelCalls": 7,
+      "imageCalls": 2,
+      "latencyMs": 54097,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "ig-story-916 protected template=tpl-gali-story",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 0,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1080x1920",
+          "output_summary": "wire bytes=911375",
+          "duration_ms": 10996,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.262x logo@0.017x panel@0.847x + text(other-0)",
+          "output_summary": "1080x1920 frame overlay applied",
+          "duration_ms": 801,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/154651 logo:0/0 panel:0/109728 feather outside core only",
+          "duration_ms": 61,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1080x1920 output",
+          "output_summary": "FAIL: Logo present in source (GALI icon + wordmark top-right) is missing in output",
+          "duration_ms": 11428,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "adfit_retry",
+          "cached": false,
+          "seq": 7
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1080x1920 (retry)",
+          "output_summary": "wire bytes=611885",
+          "duration_ms": 11875,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 8
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.262x logo@0.017x panel@0.847x + text(other-0)",
+          "output_summary": "1080x1920 frame overlay applied",
+          "duration_ms": 946,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 9
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/154651 logo:0/0 panel:0/109728 feather outside core only",
+          "duration_ms": 61,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 10
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1080x1920 output",
+          "output_summary": "FAIL: Logo present in source (GALI icon + wordmark top-right) is missing in output",
+          "duration_ms": 17910,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "needs_review",
+          "cached": false,
+          "seq": 11
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "fb-feed",
+      "mode": "protected",
+      "status": "pass",
+      "image": "fb-feed.png",
+      "plan": {
+        "preset": "fb-feed",
+        "width": 1200,
+        "height": 1200,
+        "from_template": true,
+        "template_id": "tpl-gali-ig-11",
+        "safe": {
+          "x": 48,
+          "y": 48,
+          "w": 1104,
+          "h": 1104
+        },
+        "logo": {
+          "x": 842,
+          "y": 65,
+          "w": 250,
+          "h": 68
+        },
+        "products": [
+          {
+            "x": 488,
+            "y": 233,
+            "w": 225,
+            "h": 624
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 100,
+          "y": 932,
+          "w": 1001,
+          "h": 158
+        },
+        "other_texts": [
+          {
+            "x": 790,
+            "y": 161,
+            "w": 310,
+            "h": 33
+          }
+        ],
+        "product_scales": [
+          1.1162790697674418
+        ],
+        "logo_scale": 1.1312217194570136,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 1.1162790697674418,
+          "core_differ": 0,
+          "core_total": 120535,
+          "feather_total": 3599,
+          "pass": true
+        },
+        "logo": {
+          "scale": 1.1312217194570136,
+          "core_differ": 0,
+          "core_total": 5583,
+          "feather_total": 1951,
+          "pass": true
+        },
+        "panel": {
+          "scale": 0.9294117647058824,
+          "core_differ": 0,
+          "core_total": 132088,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": true,
+        "reasons": [],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": true,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 0,
+      "modelCalls": 6,
+      "imageCalls": 1,
+      "latencyMs": 23980,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "fb-feed protected template=tpl-gali-ig-11",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 0,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1200x1200",
+          "output_summary": "wire bytes=1470673",
+          "duration_ms": 12096,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.116x logo@1.131x panel@0.929x + text(other-0)",
+          "output_summary": "1200x1200 ok",
+          "duration_ms": 415,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/120535 logo:0/5583 panel:0/132088 feather outside core only",
+          "duration_ms": 57,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1200x1200 output",
+          "output_summary": "PASS",
+          "duration_ms": 11407,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "done",
+          "cached": false,
+          "seq": 7
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "fb-link",
+      "mode": "protected",
+      "status": "needs_review",
+      "image": "fb-link.png",
+      "plan": {
+        "preset": "fb-link",
+        "width": 1200,
+        "height": 628,
+        "from_template": true,
+        "template_id": "tpl-gali-fb-link",
+        "safe": {
+          "x": 48,
+          "y": 25,
+          "w": 1104,
+          "h": 578
+        },
+        "logo": {
+          "x": 378,
+          "y": 217,
+          "w": 162,
+          "h": 44
+        },
+        "products": [
+          {
+            "x": 126,
+            "y": 64,
+            "w": 138,
+            "h": 382
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 502,
+          "y": 319,
+          "w": 598,
+          "h": 95
+        },
+        "other_texts": [
+          {
+            "x": 790,
+            "y": 78,
+            "w": 310,
+            "h": 30
+          }
+        ],
+        "product_scales": [
+          0.6831683168316832
+        ],
+        "logo_scale": 0.7333333333333333,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 0.6831683168316832,
+          "core_differ": 0,
+          "core_total": 44406,
+          "feather_total": 2203,
+          "pass": true
+        },
+        "logo": {
+          "scale": 0.7333333333333333,
+          "core_differ": 0,
+          "core_total": 1939,
+          "feather_total": 1230,
+          "pass": true
+        },
+        "panel": {
+          "scale": 0.5588235294117647,
+          "core_differ": 0,
+          "core_total": 47785,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": false,
+        "reasons": [
+          "other text mismatch: expected 'בקבוק תרמי · 750 מ״ל' found 'בקבוק תרמי · 750 מיל' - gershayim changed to yod"
+        ],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מיל",
+            "exact": false
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": true,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 1,
+      "modelCalls": 7,
+      "imageCalls": 2,
+      "latencyMs": 58983,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "fb-link protected template=tpl-gali-fb-link",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 0,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1200x628",
+          "output_summary": "wire bytes=1018609",
+          "duration_ms": 11794,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@0.683x logo@0.733x panel@0.559x + text(other-0)",
+          "output_summary": "1200x628 ok",
+          "duration_ms": 272,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/44406 logo:0/1939 panel:0/47785 feather outside core only",
+          "duration_ms": 21,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1200x628 output",
+          "output_summary": "FAIL: other text mismatch: expected 'בקבוק תרמי · 750 מ״ל' found 'בקבוק תרמי · 750 מיל' - gershayim changed to yod",
+          "duration_ms": 19247,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "adfit_retry",
+          "cached": false,
+          "seq": 7
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1200x628 (retry)",
+          "output_summary": "wire bytes=1404358",
+          "duration_ms": 12562,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 8
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@0.683x logo@0.733x panel@0.559x + text(other-0)",
+          "output_summary": "1200x628 ok",
+          "duration_ms": 388,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 9
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/44406 logo:0/1939 panel:0/47785 feather outside core only",
+          "duration_ms": 22,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 10
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1200x628 output",
+          "output_summary": "FAIL: other text mismatch: expected 'בקבוק תרמי · 750 מ״ל' found 'בקבוק תרמי · 750 מיל' - gershayim changed to yod",
+          "duration_ms": 14668,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "needs_review",
+          "cached": false,
+          "seq": 11
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "li-post",
+      "mode": "protected",
+      "status": "needs_review",
+      "image": "li-post.png",
+      "plan": {
+        "preset": "li-post",
+        "width": 1200,
+        "height": 627,
+        "from_template": true,
+        "template_id": "tpl-gali-fb-link",
+        "safe": {
+          "x": 48,
+          "y": 25,
+          "w": 1104,
+          "h": 577
+        },
+        "logo": {
+          "x": 378,
+          "y": 216,
+          "w": 162,
+          "h": 44
+        },
+        "products": [
+          {
+            "x": 126,
+            "y": 63,
+            "w": 138,
+            "h": 382
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 502,
+          "y": 319,
+          "w": 598,
+          "h": 95
+        },
+        "other_texts": [
+          {
+            "x": 790,
+            "y": 78,
+            "w": 310,
+            "h": 30
+          }
+        ],
+        "product_scales": [
+          0.6831683168316832
+        ],
+        "logo_scale": 0.7333333333333333,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 0.6831683168316832,
+          "core_differ": 0,
+          "core_total": 44406,
+          "feather_total": 2203,
+          "pass": true
+        },
+        "logo": {
+          "scale": 0.7333333333333333,
+          "core_differ": 0,
+          "core_total": 1939,
+          "feather_total": 1230,
+          "pass": true
+        },
+        "panel": {
+          "scale": 0.5588235294117647,
+          "core_differ": 0,
+          "core_total": 47785,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": false,
+        "reasons": [
+          "other text 'בקבוק תרמי · 750 מ״ל' is inexact: output reads 'בקבוק תרמי · 750 מייל' - changed letters (מ״ל vs מייל)"
+        ],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מייל",
+            "exact": false
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": true,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 1,
+      "modelCalls": 7,
+      "imageCalls": 2,
+      "latencyMs": 73032,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "li-post protected template=tpl-gali-fb-link",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 1,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1200x627",
+          "output_summary": "wire bytes=1092926",
+          "duration_ms": 9984,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@0.683x logo@0.733x panel@0.559x + text(other-0)",
+          "output_summary": "1200x627 ok",
+          "duration_ms": 837,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/44406 logo:0/1939 panel:0/47785 feather outside core only",
+          "duration_ms": 21,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1200x627 output",
+          "output_summary": "FAIL: other text ' בקבוק תרמי · 750 מ״ל' is inexact: output reads 'בקבוק תרמי · 750 מייל' - changed letters (מ״ל vs מייל)",
+          "duration_ms": 27009,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "adfit_retry",
+          "cached": false,
+          "seq": 7
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1200x627 (retry)",
+          "output_summary": "wire bytes=1325023",
+          "duration_ms": 11669,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 8
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@0.683x logo@0.733x panel@0.559x + text(other-0)",
+          "output_summary": "1200x627 ok",
+          "duration_ms": 1028,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 9
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/44406 logo:0/1939 panel:0/47785 feather outside core only",
+          "duration_ms": 21,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 10
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1200x627 output",
+          "output_summary": "FAIL: other text 'בקבוק תרמי · 750 מ״ל' is inexact: output reads 'בקבוק תרמי · 750 מייל' - changed letters (מ״ל vs מייל)",
+          "duration_ms": 22455,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "needs_review",
+          "cached": false,
+          "seq": 11
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "yt-thumb",
+      "mode": "protected",
+      "status": "pass",
+      "image": "yt-thumb.png",
+      "plan": {
+        "preset": "yt-thumb",
+        "width": 1280,
+        "height": 720,
+        "from_template": true,
+        "template_id": "tpl-gali-fb-link",
+        "safe": {
+          "x": 51,
+          "y": 29,
+          "w": 1178,
+          "h": 662
+        },
+        "logo": {
+          "x": 398,
+          "y": 248,
+          "w": 184,
+          "h": 50
+        },
+        "products": [
+          {
+            "x": 134,
+            "y": 89,
+            "w": 147,
+            "h": 407
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 535,
+          "y": 366,
+          "w": 637,
+          "h": 109
+        },
+        "other_texts": [
+          {
+            "x": 843,
+            "y": 92,
+            "w": 331,
+            "h": 30
+          }
+        ],
+        "product_scales": [
+          0.7277227722772277
+        ],
+        "logo_scale": 0.8333333333333334,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 0.7277227722772277,
+          "core_differ": 0,
+          "core_total": 50569,
+          "feather_total": 2351,
+          "pass": true
+        },
+        "logo": {
+          "scale": 0.8333333333333334,
+          "core_differ": 0,
+          "core_total": 2680,
+          "feather_total": 1410,
+          "pass": true
+        },
+        "panel": {
+          "scale": 0.6411764705882353,
+          "core_differ": 0,
+          "core_total": 62893,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": true,
+        "reasons": [],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": true,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 0,
+      "modelCalls": 6,
+      "imageCalls": 1,
+      "latencyMs": 20678,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "yt-thumb protected template=tpl-gali-fb-link",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 1,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1280x720",
+          "output_summary": "wire bytes=1048687",
+          "duration_ms": 8951,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@0.728x logo@0.833x panel@0.641x + text(other-0)",
+          "output_summary": "1280x720 ok",
+          "duration_ms": 797,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/50569 logo:0/2680 panel:0/62893 feather outside core only",
+          "duration_ms": 26,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1280x720 output",
+          "output_summary": "PASS",
+          "duration_ms": 10901,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "done",
+          "cached": false,
+          "seq": 7
+        }
+      ],
+      "error": null
+    },
+    {
+      "source": "demo-src-he",
+      "sourceLabel": "source-he.png",
+      "preset": "tiktok-916",
+      "mode": "protected",
+      "status": "needs_review",
+      "image": "tiktok-916.png",
+      "plan": {
+        "preset": "tiktok-916",
+        "width": 1080,
+        "height": 1920,
+        "from_template": true,
+        "template_id": "tpl-gali-story",
+        "safe": {
+          "x": 54,
+          "y": 269,
+          "w": 972,
+          "h": 1382
+        },
+        "logo": {
+          "x": 538,
+          "y": 1650,
+          "w": 4,
+          "h": 1
+        },
+        "products": [
+          {
+            "x": 391,
+            "y": 510,
+            "w": 255,
+            "h": 706
+          }
+        ],
+        "headline": null,
+        "subtext": null,
+        "panel": {
+          "x": 108,
+          "y": 1309,
+          "w": 864,
+          "h": 144
+        },
+        "other_texts": [
+          {
+            "x": 711,
+            "y": 269,
+            "w": 279,
+            "h": 53
+          }
+        ],
+        "product_scales": [
+          1.2623762376237624
+        ],
+        "logo_scale": 0.016666666666666666,
+        "notes": [
+          "1 other text(s) travel with pasted pixels",
+          "logo: template zone",
+          "products: template zone",
+          "panel: template zone",
+          "1 other text(s): relative position"
+        ]
+      },
+      "proof": {
+        "product-0": {
+          "scale": 1.2623762376237624,
+          "core_differ": 0,
+          "core_total": 154651,
+          "feather_total": 4069,
+          "pass": true
+        },
+        "logo": {
+          "scale": 0.016666666666666666,
+          "core_differ": 0,
+          "core_total": 0,
+          "feather_total": 0,
+          "pass": false
+        },
+        "panel": {
+          "scale": 0.8470588235294118,
+          "core_differ": 0,
+          "core_total": 109728,
+          "feather_total": 0,
+          "pass": true
+        }
+      },
+      "qa": {
+        "pass": false,
+        "reasons": [
+          "logo missing in output: GALI wordmark with icon present in source top-right is absent in output"
+        ],
+        "texts_read": [
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "20% הנחה על דגמים נבחרים",
+            "found": "20% הנחה על דגמים נבחרים",
+            "exact": true
+          },
+          {
+            "expected": "בתוקף עד 10.11 · משלוח בתשלום",
+            "found": "בתוקף עד 10.11 · משלוח בתשלום",
+            "exact": true
+          },
+          {
+            "expected": "בקבוק תרמי · 750 מ״ל",
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
+          },
+          {
+            "expected": "GALI",
+            "found": "GALI",
+            "exact": true
+          }
+        ],
+        "logo_ok": false,
+        "product_ok": true,
+        "safe_area_ok": true,
+        "invented_text": []
+      },
+      "retries": 1,
+      "modelCalls": 7,
+      "imageCalls": 2,
+      "latencyMs": 54469,
+      "trace": [
+        {
+          "step": "adfit_analyze",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "source 1080x1080",
+          "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
+          "duration_ms": 14117,
+          "evidence_ids": [
+            "src:analysis"
+          ],
+          "next_state": "adfit_masks",
+          "cached": false,
+          "seq": 1
+        },
+        {
+          "step": "adfit_masks",
+          "tool_or_model": "model:sam-3.1",
+          "input_summary": "product-0[bottle] logo[logo]",
+          "output_summary": "ok: product-0,logo",
+          "duration_ms": 9227,
+          "evidence_ids": [
+            "src:product-0",
+            "src:logo"
+          ],
+          "next_state": "adfit_plan",
+          "cached": false,
+          "seq": 2
+        },
+        {
+          "step": "adfit_plan",
+          "tool_or_model": "code:planLayout",
+          "input_summary": "tiktok-916 protected template=tpl-gali-story",
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
+          "duration_ms": 0,
+          "evidence_ids": [
+            "out:plan"
+          ],
+          "next_state": "adfit_generate",
+          "cached": false,
+          "seq": 3
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1080x1920",
+          "output_summary": "wire bytes=933728",
+          "duration_ms": 9190,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 4
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.262x logo@0.017x panel@0.847x + text(other-0)",
+          "output_summary": "1080x1920 frame overlay applied",
+          "duration_ms": 1443,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 5
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/154651 logo:0/0 panel:0/109728 feather outside core only",
+          "duration_ms": 72,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 6
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1080x1920 output",
+          "output_summary": "FAIL: logo missing in output: GALI wordmark with icon present in source top-right is absent in output",
+          "duration_ms": 16828,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "adfit_retry",
+          "cached": false,
+          "seq": 7
+        },
+        {
+          "step": "adfit_generate",
+          "tool_or_model": "model:muse-image-1.0",
+          "input_summary": "protected plate 1080x1920 (retry)",
+          "output_summary": "wire bytes=888081",
+          "duration_ms": 11024,
+          "evidence_ids": [
+            "out:plate"
+          ],
+          "next_state": "adfit_composite",
+          "cached": false,
+          "seq": 8
+        },
+        {
+          "step": "adfit_composite",
+          "tool_or_model": "code:composite+chromium",
+          "input_summary": "plate + product-0@1.262x logo@0.017x panel@0.847x + text(other-0)",
+          "output_summary": "1080x1920 frame overlay applied",
+          "duration_ms": 1300,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_proof",
+          "cached": false,
+          "seq": 9
+        },
+        {
+          "step": "adfit_proof",
+          "tool_or_model": "code:elementProof",
+          "input_summary": "3 pasted elements",
+          "output_summary": "product-0:0/154651 logo:0/0 panel:0/109728 feather outside core only",
+          "duration_ms": 66,
+          "evidence_ids": [
+            "out:product-0",
+            "out:logo",
+            "out:panel"
+          ],
+          "next_state": "adfit_qa",
+          "cached": false,
+          "seq": 10
+        },
+        {
+          "step": "adfit_qa",
+          "tool_or_model": "model:muse-spark-1.3",
+          "input_summary": "fresh read of 1080x1920 output",
+          "output_summary": "FAIL: logo missing in output: GALI wordmark with icon present in source top-right is absent in output",
+          "duration_ms": 14536,
+          "evidence_ids": [
+            "out:qa"
+          ],
+          "next_state": "needs_review",
+          "cached": false,
+          "seq": 11
+        }
+      ],
+      "error": null
+    }
+  ]
+}

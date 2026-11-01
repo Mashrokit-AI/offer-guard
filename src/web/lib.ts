@@ -1,7 +1,8 @@
+import { BRAND_NAME } from '../shared/brand.js';
 import { STRINGS, t, type Lang, type MessageKey } from '../shared/i18n.js';
 
 export type { Lang };
-export { STRINGS, t };
+export { BRAND_NAME, STRINGS, t };
 
 /** Tiny DOM helper. String children become text nodes — never HTML. */
 export function h(
@@ -24,37 +25,14 @@ export function h(
   return el;
 }
 
-export interface Msg {
-  key: string;
-  vars: Record<string, string>;
-}
-
-/**
- * Render a server {key, vars} message. Vars named `side`/`field` hold nested
- * message keys and are resolved first.
- */
-export function msg(lang: Lang, m: Msg): string {
-  const vars: Record<string, string | number> = { ...m.vars };
-  if (vars.side === 'side_ad' || vars.side === 'side_page') vars.side = t(lang, vars.side as MessageKey);
-  const f = vars.field;
-  if (typeof f === 'string' && f.startsWith('field_') && f in STRINGS.en) {
-    vars.field = t(lang, f as MessageKey);
-  }
-  if (m.key in STRINGS.en) {
-    const s = t(lang, m.key as MessageKey, vars);
-    return s.length > 0 ? s[0]?.toUpperCase() + s.slice(1) : s;
-  }
-  return m.key;
-}
-
 export function getLang(): Lang {
   try {
     const q = new URLSearchParams(window.location.search).get('lang');
     if (q === 'he' || q === 'en') {
-      window.localStorage.setItem('og-lang', q);
+      window.localStorage.setItem('adfit-lang', q);
       return q;
     }
-    return window.localStorage.getItem('og-lang') === 'he' ? 'he' : 'en';
+    return window.localStorage.getItem('adfit-lang') === 'he' ? 'he' : 'en';
   } catch {
     return 'en';
   }
@@ -62,7 +40,7 @@ export function getLang(): Lang {
 
 export function setLang(lang: Lang): void {
   try {
-    window.localStorage.setItem('og-lang', lang);
+    window.localStorage.setItem('adfit-lang', lang);
   } catch {
     // Private mode: the toggle still works for this page load.
   }
@@ -71,7 +49,7 @@ export function setLang(lang: Lang): void {
 export function applyLang(lang: Lang): void {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
-  document.title = `Offer Guard — ${t(lang, 'app_tagline')}`;
+  document.title = `${BRAND_NAME} — ${t(lang, 'app_tagline')}`;
 }
 
 export class ApiError extends Error {
@@ -97,6 +75,11 @@ export async function api(path: string, init?: RequestInit): Promise<unknown> {
   return body;
 }
 
+export function errText(lang: Lang, e: unknown): string {
+  const key = e instanceof ApiError ? e.key : 'err_unknown';
+  return key in STRINGS.en ? t(lang, key as MessageKey) : key;
+}
+
 export function fmtTime(lang: Lang, iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -112,45 +95,15 @@ export function fmtTime(lang: Lang, iso: string): string {
   }
 }
 
-/** Verdict → badge class + icon + label key. */
-export function verdictBadge(lang: Lang, verdict: string): HTMLElement {
-  let cls = 'v-err';
-  let ico = '✕';
-  let label = verdict;
-  switch (verdict) {
-    case 'CLEAN':
-      cls = 'v-clean';
-      ico = '✓';
-      label = t(lang, 'counter_clean');
-      break;
-    case 'AD_WRONG_REPAIRABLE':
-      cls = 'v-fixed';
-      ico = '✎';
-      label = t(lang, 'counter_fixed');
-      break;
-    case 'AD_WRONG_UNSAFE':
-      cls = 'v-refused';
-      ico = '!';
-      label = t(lang, 'counter_refused');
-      break;
-    case 'PAGE_WRONG':
-      cls = 'v-page';
-      ico = '⚑';
-      label = t(lang, 'counter_page_wrong');
-      break;
-    case 'AMBIGUOUS':
-      cls = 'v-amb';
-      ico = '?';
-      label = t(lang, 'counter_ambiguous');
-      break;
-    case 'CAPTURE_FAILED':
-      label = t(lang, 'verdict_capture_failed');
-      break;
-    case 'UNSUPPORTED_FORMAT':
-      label = t(lang, 'verdict_unsupported_format');
-      break;
-  }
-  return h('span', { class: `badge ${cls}` }, h('span', { class: 'ico', 'aria-hidden': 'true' }, ico), label);
+/** QA badge: green check or amber warning. */
+export function qaBadge(lang: Lang, pass: boolean | null): HTMLElement {
+  if (pass === true) return h('span', { class: 'badge v-clean' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '✓'), t(lang, 'qa_pass'));
+  if (pass === false) return h('span', { class: 'badge v-page' }, h('span', { class: 'ico', 'aria-hidden': 'true' }, '⚠'), t(lang, 'qa_fail'));
+  return h('span', { class: 'badge v-err' }, '…');
+}
+
+export function modeBadge(lang: Lang, mode: string): HTMLElement {
+  return h('span', { class: 'chip' }, t(lang, mode === 'fast' ? 'mode_badge_fast' : 'mode_badge_protected'));
 }
 
 export interface Bbox {
@@ -166,7 +119,7 @@ export function bboxDiv(bbox: Bbox, frameW: number, frameH: number, cls: string,
     class: `box ${cls}`,
     style: [
       `left:${((bbox.x / frameW) * 100).toFixed(2)}%`,
-      `top:${((bbox.y / frameH) * 100).toFixed(2)}%`,
+      `top:${((bbox.y / frameW) * 100).toFixed(2)}%`,
       `width:${((bbox.w / frameW) * 100).toFixed(2)}%`,
       `height:${((bbox.h / frameH) * 100).toFixed(2)}%`,
     ].join(';'),
@@ -175,38 +128,36 @@ export function bboxDiv(bbox: Bbox, frameW: number, frameH: number, cls: string,
   return d;
 }
 
-/** Draw a zoomed crop of one bbox onto a canvas (fixed height, honest zoom). */
-export function cropCanvas(img: HTMLImageElement, bbox: Bbox, heightPx = 110): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  const w = Math.max(1, Math.round(bbox.w));
-  const hgt = Math.max(1, Math.round(bbox.h));
-  const scale = heightPx / hgt;
-  canvas.height = heightPx;
-  canvas.width = Math.min(640, Math.max(1, Math.round(w * scale)));
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, bbox.x, bbox.y, w, hgt, 0, 0, canvas.width, heightPx);
-  }
-  return canvas;
-}
-
-export function shieldSvg(): SVGSVGElement {
+/** Brand mark: two overlapping placement frames. */
+export function brandSvg(): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '30');
   svg.setAttribute('height', '30');
   svg.setAttribute('viewBox', '0 0 32 32');
   svg.setAttribute('aria-hidden', 'true');
-  const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  p1.setAttribute('d', 'M16 2l11 4v8c0 7-4.6 12.4-11 16C9.6 26.4 5 21 5 14V6z');
-  p1.setAttribute('fill', '#0c6b4f');
-  const p2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  p2.setAttribute('d', 'M11 15.5l3.4 3.4L21.5 12');
-  p2.setAttribute('stroke', '#fff');
-  p2.setAttribute('stroke-width', '2.6');
-  p2.setAttribute('fill', 'none');
-  p2.setAttribute('stroke-linecap', 'round');
-  p2.setAttribute('stroke-linejoin', 'round');
-  svg.append(p1, p2);
+  const back = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  back.setAttribute('x', '9');
+  back.setAttribute('y', '3');
+  back.setAttribute('width', '20');
+  back.setAttribute('height', '20');
+  back.setAttribute('rx', '2');
+  back.setAttribute('fill', 'none');
+  back.setAttribute('stroke', '#7fb8a4');
+  back.setAttribute('stroke-width', '2.4');
+  const front = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  front.setAttribute('x', '3');
+  front.setAttribute('y', '9');
+  front.setAttribute('width', '20');
+  front.setAttribute('height', '20');
+  front.setAttribute('rx', '2');
+  front.setAttribute('fill', '#0c6b4f');
+  const check = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  check.setAttribute('d', 'M8.5 19.5l4 4L18 17');
+  check.setAttribute('stroke', '#fff');
+  check.setAttribute('stroke-width', '2.6');
+  check.setAttribute('fill', 'none');
+  check.setAttribute('stroke-linecap', 'round');
+  check.setAttribute('stroke-linejoin', 'round');
+  svg.append(back, front, check);
   return svg;
 }

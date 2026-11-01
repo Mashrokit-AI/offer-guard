@@ -1,87 +1,79 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { Store } from '../src/server/store/db.js';
-import { sweepCacheKey, type CacheKeyInput } from '../src/server/store/cache.js';
 
-const BASE_KEY: CacheKeyInput = {
-  imageBytes: Buffer.from('fake-png-bytes'),
-  copy: 'some copy',
-  landingUrl: 'http://127.0.0.1:1/gali-offer-he.html',
-  specVersion: 1,
-  models: 'muse-spark-1.3+sam-3.1',
-  promptVersions: 'extract-ad-v1+extract-page-v1+panel-v1',
-};
-
-describe('sweep cache key', () => {
-  it('is a stable sha256 hex', () => {
-    const a = sweepCacheKey(BASE_KEY);
-    const b = sweepCacheKey({ ...BASE_KEY, imageBytes: Buffer.from('fake-png-bytes') });
-    expect(a).toBe(b);
-    expect(a).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it('changes when any input changes', () => {
-    const base = sweepCacheKey(BASE_KEY);
-    const variants: CacheKeyInput[] = [
-      { ...BASE_KEY, imageBytes: Buffer.from('other-bytes') },
-      { ...BASE_KEY, copy: 'other copy' },
-      { ...BASE_KEY, landingUrl: 'http://127.0.0.1:1/other.html' },
-      { ...BASE_KEY, specVersion: 2 },
-      { ...BASE_KEY, models: 'other-model' },
-      { ...BASE_KEY, promptVersions: 'extract-ad-v2+extract-page-v1+panel-v1' },
-    ];
-    for (const v of variants) expect(sweepCacheKey(v)).not.toBe(base);
-  });
-});
+function open(): { store: Store; dbPath: string } {
+  const dbPath = join(mkdtempSync(join(tmpdir(), 'adfit-db-')), 't.db');
+  return { store: Store.open(dbPath), dbPath };
+}
 
 describe('store', () => {
-  let store: Store | null = null;
-  afterEach(() => {
-    store?.close();
-    store = null;
+  it('creates brands and resolves exact-size then default templates', () => {
+    const { store } = open();
+    try {
+      store.insertBrand({ id: 'b1', name: 'B', colors: ['#ffffff'], fonts: [], logoPath: null, isDemo: false, expiresAt: null });
+      store.insertTemplate({ id: 't-def', brandId: 'b1', preset: null, imagePath: 'data/x.png', framePath: null, expiresAt: null });
+      store.setTemplateReady('t-def', '{"direction":"rtl"}');
+      store.insertTemplate({ id: 't-11', brandId: 'b1', preset: 'ig-feed-11', imagePath: 'data/y.png', framePath: null, expiresAt: null });
+      store.setTemplateReady('t-11', '{"direction":"rtl"}');
+      expect(store.templateForSize('b1', 'ig-feed-11')?.id).toBe('t-11');
+      expect(store.templateForSize('b1', 'ig-story-916')?.id).toBe('t-def');
+      expect(store.templateForSize('b1', 'nope-preset')?.id).toBe('t-def');
+      // Pending templates never resolve.
+      store.insertTemplate({ id: 't-pend', brandId: 'b1', preset: 'fb-feed', imagePath: 'data/z.png', framePath: null, expiresAt: null });
+      expect(store.templateForSize('b1', 'fb-feed')?.id).toBe('t-def');
+    } finally {
+      store.close();
+    }
   });
 
-  function openTmp(): { store: Store; dbPath: string } {
-    const dbPath = join(mkdtempSync(join(tmpdir(), 'og-store-')), 'test.db');
-    store = Store.open(dbPath);
-    return { store, dbPath };
-  }
+  it('tracks jobs, outputs and per-kind usage', () => {
+    const { store } = open();
+    try {
+      store.insertSource({ id: 's1', imagePath: 'data/s.png', width: 100, height: 100, expiresAt: null });
+      store.insertJob({ id: 'j1', brandId: null, mode: 'protected', sizes: ['ig-feed-11'], sources: ['s1'] });
+      const oid = store.insertOutput({
+        jobId: 'j1', sourceId: 's1', preset: 'ig-feed-11', mode: 'protected', status: 'pass',
+        imagePath: 'data/o.png', planJson: '{}', proofJson: null, qaJson: '{"pass":true}',
+        retries: 0, modelCalls: 3, imageCalls: 1, latencyMs: 5, traceJson: '[]', error: null,
+      });
+      expect(store.getOutput(oid)?.status).toBe('pass');
+      expect(store.outputsForJob('j1')).toHaveLength(1);
+      store.finishJob('j1', 'done', null, 3, 1);
+      expect(store.getJob('j1')?.status).toBe('done');
+      store.recordUsage('model', 3);
+      store.recordUsage('image', 1);
+      store.recordUsage('model', 0); // no-op, never a row
+      const midnight = new Date();
+      midnight.setUTCHours(0, 0, 0, 0);
+      expect(store.countUsageSince(midnight.toISOString(), 'model')).toBe(3);
+      expect(store.countUsageSince(midnight.toISOString(), 'image')).toBe(1);
+    } finally {
+      store.close();
+    }
+  });
 
-  it('round-trips a run: snapshot, capture, claims, findings, repair, trace', () => {
-    const { store: s } = openTmp();
-    s.upsertSpec(1, '{"version":1}');
-    const runId = s.createRun({ manifestPath: 'fixtures/campaign.json', fresh: true, pagesBase: 'http://x/', specVersion: 1 });
-    const snapId = s.insertSnapshot({
-      run_id: runId,
-      ad_key: 'ad-01/he',
-      image_sha256: 'abc',
-      image_bytes: 10,
-      copy: 'copy',
-      landing_url: 'http://x/p.html',
-      cache_key: 'key-1',
-      capture_time: '2026-10-29T00:00:00.000Z',
-      original_capture_time: null,
-      verdict: 'CLEAN',
-      expected: 'CLEAN',
-      pass: 1,
-      cached: 0,
-      latency_ms: 5,
-      model_calls: 2,
-    });
-    s.insertCapture({ snapshotId: snapId, requestedUrl: 'http://x/p.html', finalUrl: 'http://x/p.html', captureTime: '2026-10-29T00:00:00.000Z', screenshotPaths: ['a.png'], chunksJson: '[]' });
-    s.insertClaim({ snapshotId: snapId, source: 'ad', field: 'percent', normalized: '20%', verbatim: '20%', evidenceId: 'ad:discount' });
-    s.insertFinding({ snapshotId: snapId, kind: 'contradiction', side: 'ad', field: 'percent', specValue: '20%', observedValue: '30%', evidenceIds: ['ad:discount'], detail: 'd' });
-    s.insertRepairArtifact({ snapshotId: snapId, beforeSha256: 'a', afterSha256: 'b', digest: 'd', proofJson: '{}', revalidationJson: '{}', artifactDir: 'artifacts/x' });
-    s.insertTrace({ snapshotId: snapId, seq: 1, step: 'snapshot', toolOrModel: 'code', inputSummary: 'i', outputSummary: 'o', durationMs: 1, evidenceIds: [], nextState: 'extract_ad', cached: false });
-    s.finishRun(runId);
-
-    const hit = s.findByCacheKey('key-1');
-    expect(hit?.snapshot.verdict).toBe('CLEAN');
-    expect(hit?.capture?.final_url).toBe('http://x/p.html');
-    expect(hit?.claims).toHaveLength(1);
-    expect(hit?.findings).toHaveLength(1);
-    expect(s.findByCacheKey('nope')).toBeNull();
+  it('deletes expired visitor rows but keeps demo brands', () => {
+    const { store } = open();
+    try {
+      const past = new Date(Date.now() - 1000).toISOString();
+      const future = new Date(Date.now() + 3600_000).toISOString();
+      store.insertBrand({ id: 'demo', name: 'D', colors: [], fonts: [], logoPath: 'fixtures/x.png', isDemo: true, expiresAt: null });
+      store.insertBrand({ id: 'old', name: 'O', colors: [], fonts: [], logoPath: 'data/old/logo.png', isDemo: false, expiresAt: past });
+      store.insertBrand({ id: 'new', name: 'N', colors: [], fonts: [], logoPath: null, isDemo: false, expiresAt: future });
+      store.insertTemplate({ id: 't-old', brandId: 'old', preset: null, imagePath: 'data/old/t.png', framePath: null, expiresAt: past });
+      store.insertSource({ id: 's-old', imagePath: 'data/old/s.png', width: 1, height: 1, expiresAt: past });
+      const paths = store.deleteExpired(new Date().toISOString());
+      expect(paths.sort()).toEqual(['data/old/logo.png', 'data/old/s.png', 'data/old/t.png'].sort());
+      expect(store.getBrand('old')).toBeNull();
+      expect(store.getTemplate('t-old')).toBeNull();
+      expect(store.getSource('s-old')).toBeNull();
+      expect(store.getBrand('demo')).not.toBeNull();
+      expect(store.getBrand('new')).not.toBeNull();
+    } finally {
+      store.close();
+    }
   });
 });

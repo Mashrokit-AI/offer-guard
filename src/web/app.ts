@@ -1,7 +1,7 @@
-import { applyLang, getLang, h, setLang, shieldSvg, t, type Lang } from './lib.js';
-import { campaignView } from './campaign.js';
-import { detailView } from './detail.js';
-import { checkView } from './check.js';
+import { applyLang, brandSvg, getLang, h, setLang, t, BRAND_NAME, type Lang } from './lib.js';
+import { homeView } from './home.js';
+import { outputView } from './output.js';
+import { brandsView } from './brands.js';
 import { aboutView } from './about.js';
 
 const REPO = 'https://github.com/Mashrokit-AI/offer-guard';
@@ -16,11 +16,11 @@ function shell(lang: Lang, main: HTMLElement, route: string): HTMLElement {
   heBtn.addEventListener('click', () => switchLang('he'));
   const header = h('header', { class: 'topbar' },
     h('div', { class: 'topbar-inner' },
-      h('a', { class: 'brand', href: '#/' }, shieldSvg(), h('span', { class: 'brand-name' }, t(lang, 'app_name'))),
+      h('a', { class: 'brand', href: '#/' }, brandSvg(), h('span', { class: 'brand-name' }, BRAND_NAME)),
       h('span', { class: 'tagline' }, t(lang, 'app_tagline')),
       h('nav', { class: 'nav' },
-        navLink('#/', t(lang, 'nav_campaign'), 'campaign'),
-        navLink('#/check', t(lang, 'nav_check'), 'check'),
+        navLink('#/', t(lang, 'nav_home'), 'home'),
+        navLink('#/brands', t(lang, 'nav_brands'), 'brands'),
         navLink('#/about', t(lang, 'nav_about'), 'about'),
       ),
       h('div', { class: 'lang-toggle', role: 'group', 'aria-label': 'EN / עב' }, enBtn, heBtn),
@@ -47,22 +47,21 @@ function render(): void {
   const mount = document.getElementById('app');
   if (!mount) return;
   const raw = window.location.hash.replace(/^#/, '') || '/';
-  const [path, query] = raw.split('?');
-  const params = new URLSearchParams(query ?? '');
-  let route = 'campaign';
+  const [path] = raw.split('?');
+  let route = 'home';
   let main: HTMLElement;
-  const adMatch = (path ?? '').match(/^\/ad\/(\d+)$/);
-  if (adMatch) {
-    route = 'detail';
-    main = detailView(lang, Number(adMatch[1]), params.get('cached') === '1');
-  } else if (path === '/check') {
-    route = 'check';
-    main = checkView(lang);
+  const outMatch = (path ?? '').match(/^\/output\/(\d+)$/);
+  if (outMatch) {
+    route = 'output';
+    main = outputView(lang, Number(outMatch[1]));
+  } else if (path === '/brands') {
+    route = 'brands';
+    main = brandsView(lang);
   } else if (path === '/about') {
     route = 'about';
     main = aboutView(lang);
   } else {
-    main = campaignView(lang);
+    main = homeView(lang);
   }
   mount.replaceChildren(shell(lang, main, route));
   window.scrollTo(0, 0);

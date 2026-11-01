@@ -1,276 +1,94 @@
-# Offer Guard — Architecture (design only, nothing built yet)
+# AdFit — Architecture
 
-Meta Global AI Developer Hackathon · Indie track · team Mashrokit (Oz + Evyatar)
-Submit: Wed Nov 4 evening Israel time (hard deadline Thu Nov 5 04:00 IL).
-Sources: brainstorm with ChatGPT, Gemini and Instinct (2 rounds each, 29.10.2026) + Meta docs checked directly the same day.
+Meta hackathon · team Mashrokit (Oz + Evyatar).
+Pivot (Nov 1): Offer Guard (checking ad promises) is dropped — not a proven
+problem in our agency and it doesn't showcase Meta's models. The new product
+is **one creative → every placement size**, built on Meta's models.
+`docs/build/` keeps the honest history of both eras.
 
 ---
 
 ## בעברית בקצרה
 
-**מה בונים:** סוכן שעובר על כל המודעות בקמפיין, קורא מה כל מודעה מבטיחה (בתמונה ובטקסט), משווה למבצע שאושר ולעמוד הנחיתה, ומחליט: תקינה / מודעה שגויה שאפשר לתקן / מודעה שגויה שמסוכן לתקן (מסרב) / האתר שגוי (רק מתריע) / לא ברור (שואל שאלה אחת). כשאפשר לתקן — הוא מחליף רק את פאנל המחיר בתמונה, מוכיח מתמטית שאף פיקסל של המוצר והלוגו לא זז, ואחרי אישור אנושי יוצר במטא מודעה מחליפה **מושהית**.
+**מה בונים:** מעלים קריאייטיב גמור, בוחרים מותג וגדלים, ומקבלים כל מיקום
+בחזרה. המותג מלמד את הפריסה שלו לכל גודל דרך תבניות (קריאייטיבים גמורים
+מהעבר). במצב מוגן ה-AI מצייר רק את הרקע, והמוצר/לוגו/טקסט חוזרים כפיקסלים
+מקוריים עם הוכחה; במצב מהיר ה-AI מרכיב הכל מחדש. Spark בודק כל פלט; בכשלון
+מנסים שוב פעם אחת, ואז מסמנים "דורש בדיקה".
 
-**החלטות שכולם הסכימו עליהן:**
-- צינור קבוע (state machine) עם שלב חקירה אחד מוגבל של Wonder — לא סוכן חופשי.
-- TypeScript מקצה לקצה (כמו השירותים שלנו), Playwright לצילום האתר, Chromium לעימוד עברית, Sharp להרכבת התמונה.
-- Spark 1.3 קורא ומחלץ; Wonder חוקר רק מקרים לא פתורים; SAM מסמן מוצר ולוגו.
-- אין "ציון ביטחון" של המודל — רק כללים ובדיקות קוד.
-- Graph API v25, פורמט אחד בלבד (מודעת תמונה אחת בפייסבוק), בלי עגלה.
-- 8 מקרי בדיקה, הקפאת פיצ'רים ביום שלישי.
-
-**המחלוקת היחידה:** האם להוסיף את יכולת ה"גלישה העצמית" של Wonder (computer use) לבדיקת תנאים שמסתתרים מאחורי לחיצה. Gemini — כן, ChatGPT ואינסטינקט — לא. **ההכרעה כאן:** לא בגרסה הבסיסית; תוספת אופציונלית רק אם הכל עובד עד יום שני בערב.
+**העקרונות:** צינור קבוע (לא סוכן חופשי); TypeScript מקצה לקצה; שום דבר לא
+מתפרסם לשום פלטפורמה; הוכחות בקוד, לא ציוני ביטחון של המודל; הכל דו-לשוני.
 
 ---
 
 ## 1. Decisions
 
-| # | Decision | Agreed by |
-|---|---|---|
-| 1 | Fixed pipeline / state machine + one bounded Wonder investigation stage. App owns every transition. Publishing is NOT an agent tool. | ChatGPT, Gemini, Instinct |
-| 2 | TypeScript end-to-end: Express API + React/Vite UI, SQLite, local artifact dir. One app, one in-process worker. | All three (Instinct suggested Next.js; Express chosen to match our services) |
-| 3 | Landing pages: Playwright capture (screenshot + visible DOM text), not computer-use. | All three |
-| 4 | Hebrew: render the offer panel as HTML in Chromium (Playwright screenshot), composite with Sharp. No Pillow/bidi. | All three |
-| 5 | Models: Spark 1.3 = extraction + revalidation; Wonder 1.0 = bounded investigation of unresolved findings; SAM 3.1 = protected masks. No Muse Image / Voice in v1. | All three |
-| 6 | Gating = evidence coverage + deterministic rules. No self-reported confidence thresholds. | All three |
-| 7 | Graph API pinned to v25.0. Single-image Facebook link ad in a pre-made ad set. | All three |
-| 8 | Test set: 8 semantic cases (6 dev + 2 held-out, one authored blind by the teammate) + separate operational fault checks. | ChatGPT, Instinct (Gemini: 6) |
-| 10 | Languages: Hebrew + English ads (English twins of every fixture); all UI strings bilingual via `src/shared/i18n.ts` (code uses message keys); demo in English, scripts default to English with `--lang he`. | Oz |
-| 9 | Stretch only: Wonder/Spark computer-use "deep check" when offer terms are behind a click. | Gemini yes; ChatGPT, Instinct no → stretch |
+| # | Decision |
+|---|---|
+| 1 | Fixed pipeline per source × size: analyze → plan → generate → QA (+1 retry). App owns every transition. No free agent, no publishing. |
+| 2 | TypeScript end-to-end: Hono API + dependency-free bundled UI, SQLite, local artifact dirs. One app, one in-process worker. |
+| 3 | Brand templates teach layout per size. Spark reads each template into a stored `TemplateSpec` (zones 0–1); the user can nudge boxes or reject. |
+| 4 | Protected mode: Muse Image paints the background plate only; code places SAM-cut product/logo pixels (uniform scale, recorded), copies opaque panels as pixel blocks, re-renders free text verbatim in Chromium (bundled Noto), applies the frame overlay last. |
+| 5 | Pixel proof per pasted element: 0 differing core pixels after the recorded transform; a soft 1–2 px feather is allowed only outside the mask core. |
+| 6 | QA = a fresh Spark call per output (never the analysis call): verbatim texts exact, logo/product present and uncropped, safe area respected, no invented text. One retry, then "needs review". |
+| 7 | Gating = deterministic rules + proofs. No self-reported confidence thresholds. |
+| 8 | Hebrew + English creatives and UI (`src/shared/i18n.ts`, message keys); text stays in logical order, numerals bidi-isolated. |
+| 9 | Synthetic demo brands only (GALI flat, NOA photographic AI-generated). No real client data in the repo. |
 
-## 2. Verified Meta facts (docs, 29.10.2026)
+## 2. Verified Meta facts (tested Nov 1, don't re-research without cause)
 
-- API base `https://api.meta.ai/v1`, OpenAI-compatible (Responses, Chat Completions). Bearer `MODEL_API_KEY`.
-- `muse-spark-1.3`: text/image/video/PDF in, 1M ctx, tool calling, structured output; tuned for agentic/browser loops; cheaper. Audio input degraded on 1.3.
-- `muse-wonder-1.0`: preview; same inputs; computer use (Responses API, `tools:[{type:"computer"}]`, we supply the Playwright driver and must handle `pending_safety_checks`). Wonder Full is NOT on the API.
-- `sam-3.1`: via Responses API; noun phrase or box/point prompts; image or video; returns boxes + pixel masks as special-token text → parse with `@meta-sam/parser` (`parseImageStream`, `decodeMaskToRaster`, `metadata.mask_encoding: "one_bit"`). Zero matches = empty output.
-- `muse-image-1.0`: generate/edit by instruction only — `mask` param returns 400; `size` is aspect ratio only; $0.01/image. (Not used in v1.)
-- Responses/Chat Completions accept only `tool_choice: "auto"` → enforce required steps in our state machine (per ChatGPT's doc check).
+- API base `https://api.meta.ai/v1`, OpenAI-compatible chat + Responses. Bearer `MODEL_API_KEY`.
+- `POST /images/edits`, JSON `{model:"muse-image-1.0", prompt, size:"WxH", images:[{image_url:"data:…"}], output_format:"png", reasoning_strength:"low"|"high"}`. Up to 10 input images; multi-image composition works. `size` is **aspect ratio only** (1080x1920 → 1152x2048) — code cover-fits to the exact preset and verifies. `mask`, `enable_web_search`, `enable_image_search` → 400. ~16–18 s/image, $0.01.
+- Quality on GALI: full-recompose prompts keep Hebrew and layout but redraw the bottle (proportions drift); background-plate prompts give a clean plate that composites well with SAM-cut originals.
+- `muse-spark-1.3`: structured output via `response_format: json_schema` (strict), with "JSON only" + local Zod fallback and one validation retry. Boxes prompted in pixels but sometimes returned 0–1000/0–1 → detect + convert.
+- `sam-3.1` via Responses streaming + `@meta-sam/parser`: noun phrase or box prompts; union of phrase + box (from Spark's box) per element; zero matches = empty, never an error. Fixture GALI: "logo" alone misses the wordmark, hence the union.
 
 ## 3. Data flow
 
 ```
-Confirmed offer spec + campaign_id
-  → Snapshot: list ads, read creatives, download source images, capture landing pages (Playwright)
-  → Extract (Spark 1.3, JSON schema): claims from ad image + copy; claims from page screenshot + text
-  → Compare (code): normalized fields vs spec
-  → Investigate (Wonder 1.0, bounded): only unresolved/semantic findings; may request more evidence
-  → Verdict (code, from findings)
-  → If AD_WRONG_REPAIRABLE: SAM masks → Chromium Hebrew panel → Sharp composite → pixel proof → Spark revalidation
-  → Human approval (bound to artifact digest + spec version)
-  → Publish (code): adimages → adcreatives → ads(status=PAUSED) → readback
+source upload(s) + brand + sizes + mode
+  → Analyze (Spark, once per source): products/logo/texts/panel/background
+  → Masks (SAM, once per source): phrase+box union per element → persisted PNGs
+  → Plan (code, per size): template zones (mirrored on direction mismatch)
+    or defaults (corner logo / centered product / bottom panel), all in safe area
+  → Generate (per size, 2 at a time):
+      Fast:      Muse Image edit [source, template?] → exact-size
+      Protected: Muse Image background plate → paste originals → render text
+                 → frame overlay → per-element proof
+  → QA (fresh Spark): PASS | FAIL→retry once→needs_review
+  → SSE progress per size; ZIP + manifest download
 ```
 
-| Component | Model or code | Owner |
-|---|---|---|
-| Spec confirmation | Spark proposes structured spec from a short brief; human confirms | Evyatar |
-| Campaign adapter | Code (Graph v25) | Oz |
-| Page capture | Code (Playwright) | Oz |
-| Claim extraction | Spark 1.3 | Evyatar |
-| Comparison + verdict | Code | Evyatar |
-| Investigation | Wonder 1.0, max 3 rounds / 4 tool calls per ad | Evyatar |
-| Protection masks | SAM 3.1 + code | Evyatar |
-| Repair render + composite + proof | Code (Chromium, Sharp) | Evyatar |
-| Revalidation | Fresh Spark call + code | Evyatar |
-| Publisher + readback | Code only | Oz |
-| UI + trace | Code | Oz (shell), Evyatar (repair view) |
+## 4. Modules
 
-*(Owner split is a proposal — swap if it suits you better.)*
+- `src/shared/brand.ts` — product name in one place (`BRAND_NAME`).
+- `src/shared/presets.ts` — the 8 placement presets + safe areas.
+- `src/shared/schemas.ts` — `SourceAnalysis`, `TemplateSpec`, `QAverdict`, `LayoutPlan` (Zod).
+- `src/shared/{config,env,guards,masking,geometry,i18n}.ts` — model config, secrets loading, PAUSED guard, masking, mask/box math, bilingual strings.
+- `src/server/models/` — `client.ts` (OpenAI client, retry, usage), `spark.ts` (generic structured calls), `analyze.ts`, `template-read.ts`, `qa.ts`, `brand-match.ts`, `sam.ts` (Responses streaming), `muse-image.ts` (edits/generations + shape-tolerant parse).
+- `src/server/adfit/` — `planner.ts`, `pipeline.ts` (prepare/generate/composite/proof/QA/retry, pool of 2), `seed.ts` (fixture brands + saved demo).
+- `src/server/repair/` — `masks.ts` (phrase+box union), `render.ts` (Chromium panel + free-text blocks, bundled Noto), `composite.ts` (RGBA ops, feathered paste, exact-size), `proof.ts` (element proof + digest).
+- `src/server/store/db.ts` — SQLite: brands, templates, sources, jobs, outputs, usage.
+- `src/server/http/` — `app.ts` (routes), `jobs.ts` (one-at-a-time + queue + SSE), `uploads.ts` (content validation, re-encode), `media.ts` (by-id, contained), `zip.ts` (stored ZIP), `config.ts` (`ADFIT_*`), `dto.ts`, `server.ts`.
+- `src/server/workflow/trace.ts` — tool-call trace collector.
+- `src/web/` — dependency-free UI: `home.ts`, `output.ts`, `brands.ts`, `about.ts`, shell + RTL in `app.ts`/`lib.ts`.
 
-## 4. Records (SQLite)
+## 5. Storage
 
-| Record | Contents |
-|---|---|
-| OfferSpec | discount, scope/eligibility, shipping terms, validity (dates + year + TZ), required disclosures, version. "Unspecified" ≠ "none". |
-| SourceSnapshot | ad / creative / adset IDs, original copy, image bytes + local SHA-256 + Meta image hash, destination URL, capture time |
-| PageCapture | requested URL, final URL, screenshots (≤3 viewport sections), visible text chunks with bounds, capture time |
-| Claim | field, normalized value, verbatim source text, source location, evidence ID |
-| Finding | spec fact, observed claim, contradiction / missing, repair blocker |
-| RepairArtifact | before/after image + copy, edit rectangle, protected masks, pixel-check results, revalidation result, digest |
-| Approval / PublishJournal | artifact digest, spec version, approver + time, operation key, returned Meta IDs, readback |
+- `data/adfit.db` — SQLite (gitignored). `data/uploads|templates|logos|outputs|masks/` — normalized PNGs (gitignored, 24 h expiry for visitor data).
+- `fixtures/brands/{gali,noa}/` — committed synthetic brands: sources, templates, logos, frame, Spark specs, saved demo job.
+- `artifacts/adfit-live/` — live batch outputs + report (gitignored). `artifacts/ui/` — screenshots (gitignored).
 
-## 5. Verdict logic (code)
+## 6. Limits
 
-| Condition | Verdict |
-|---|---|
-| Evidence complete, ad and page agree with spec | CLEAN (= no contradiction in the inspected ad + page; not a policy approval) |
-| Ad contradicts spec, page agrees, every edit supported | AD_WRONG_REPAIRABLE |
-| Ad contradicts spec + any repair blocker | AD_WRONG_UNSAFE → refuse, explain |
-| Ad agrees, page contradicts spec | PAGE_WRONG → flag only, never rewrite the promise |
-| Both wrong | AD_WRONG_UNSAFE + separate PAGE_WRONG finding |
-| A material fact can't be resolved | AMBIGUOUS → one focused question |
+Kill switch · one heavy job + queue ≤ 3 · 3 live jobs/IP/hour · daily caps
+(model calls + images) · 2 sizes in flight · ≤3 sources × ≤8 sizes per job ·
+uploads JPEG/PNG/WebP ≤ 10 MB / 24 MP, re-encoded, 24 h expiry.
 
-Operational states (CAPTURE_FAILED, UNSUPPORTED_FORMAT) are separate and never become CLEAN.
+## 7. What was deliberately cut
 
-## 6. Agent tools (Wonder investigation stage)
-
-| Tool | Input → output |
-|---|---|
-| inspect_ad_region | snapshot ID + rectangle → enlarged crop + evidence ID |
-| inspect_page_region | capture ID + element/region → text, crop, bounds |
-| capture_more_page | capture ID + allowed scroll position → new screenshot + text |
-| check_offer_facts | spec version + normalized claims → deterministic field comparison |
-| propose_panel_repair | ad ID + panel bounds + corrected fields → candidate or explicit blocker |
-| validate_candidate | candidate ID → pixel checks + semantic checks |
-| request_clarification | finding ID + one question → pending human answer |
-
-Reliability rules: JSON-schema outputs validated again locally (Zod) · every material claim cites evidence · DOM quotes verified against stored text · original Hebrew stored next to normalized value · one retry with enlarged crop · one repair revision, then abstain · retry transient errors twice with backoff · concurrency 2 · revalidation in a fresh context · page content is evidence, never instructions.
-
-## 7. Landing-page capture (Playwright)
-
-Chromium, 390×844 CSS px, fixed device scale, `he-IL` locale, `Asia/Jerusalem` TZ · bounded timeout, wait for fonts + short settle (no endless network-idle) · initial viewport + up to 2 more sections · visible text with element bounds (no scripts/hidden/raw HTML) · record final URL + time · reuse one capture per identical URL in a sweep · consent wall / login / bot challenge → AMBIGUOUS · allowlist our demo domains, block private/loopback/metadata addresses · browser never sees Meta credentials · no cart, login or form submit.
-
-## 8. Repair pipeline
-
-Supported family only: **one opaque rectangular offer panel, separated from product and logo.**
-
-1. **Source:** download the real source image (not thumbnail), normalize once to a canonical pixel buffer, keep original dimensions.
-2. **Panel:** Spark proposes the rectangle and transcribes ALL offer text in the image. Code checks it fits the family; the user sees the outline.
-3. **Refuse when:** wrong text exists outside the panel · panel transparent/textured/irregular · product or logo overlaps panel · corrected text doesn't fit at minimum size · erasing would need hidden product pixels.
-4. **Protect:** separate SAM requests for product and logo (box prompts if the phrase fails) → union → dilate a few px → show overlay. Empty/incomplete mask = blocker.
-5. **Render:** small HTML panel, bundled Noto Sans Hebrew (+ license), `dir="rtl" lang="he"`, numbers/%/₪/dates in explicit bidi-isolated spans, logical order (never reverse strings), wait for fonts, check overflow. Text comes from approved templates filled from spec fields — no creative rewriting of the promise.
-6. **Composite:** Sharp replaces pixels only inside the edit rectangle. No Muse Image.
-7. **Proof:** changed pixels inside protected mask = 0 · max channel diff = 0 · changed pixels outside the edit rectangle = 0 · same dimensions. Export lossless PNG, decode it, check again. (Pixel equality proves only the measured region — the outside-rectangle check is the stronger guarantee.)
-8. **Revalidate:** fresh Spark extraction on the final PNG + copy; fail if an old promise remains, a qualification disappears, or a new unsupported promise appears.
-
-## 9. Marketing API flow (Graph v25.0)
-
-| # | Call | Notes |
-|---|---|---|
-| 1 | `GET /{campaign_id}/ads` | paginate; ad IDs, adset IDs, status, creative IDs |
-| 2 | `GET /{creative_id}` | link_data, image ref, copy, destination, enhancement settings |
-| 3 | `GET /act_{id}/adimages` | resolve original image by hash |
-| 4 | `GET /{adset_id}` | confirm account/campaign + supported config |
-| 5 | Human approval | bound to artifact digest + spec version |
-| 6 | `POST /act_{id}/adimages` | upload repaired PNG → keep returned **image_hash** |
-| 7 | `POST /act_{id}/adcreatives` | allowlisted payload: page_id, `object_story_spec.link_data` {image_hash, message, link, name, CTA} |
-| 8 | `POST /act_{id}/ads` | original adset_id, new creative_id, `status=PAUSED` |
-| 9 | `GET /{new_ad_id}` + creative | confirm configured status PAUSED, adset, creative, copy, image hash |
-
-Input gate: accept only the verified single-image link-ad format; reject carousel, catalog, dynamic/multi-asset, video and unsupported existing-post creatives (→ UNSUPPORTED_FORMAT). Store immutable snapshots and build an explicit new-creative payload — never a blind clone of the read response. Keep destination, CTA, tracking and Page/identity exactly as they were unless the approved change covers them. Repair a contradictory headline too, not only the caption. *(Instinct)*
-
-Gotchas: `ads_management` doesn't prove Page access — test the real Page · image_hash ≠ our SHA-256 · read configured `status`, not only `effective_status` (new ads show PENDING_REVIEW) · disable creative enhancements so Meta doesn't alter the reviewed creative · creation ≠ approval/delivery — say "PAUSED replacement created and verified" · old ad stays untouched — say so in the UI · POST timeouts can duplicate → operation key = hash(source ad + spec version + artifact digest + target), journal every returned ID, reconcile before retry, "creative created, ad unconfirmed" is a valid partial state · re-read source + spec before publishing; any change voids approval.
-
-## 10. Repo structure
-
-```
-offer-guard/                 (new public repo, only new code)
-  src/shared/                schemas (Zod), verdict rules, tool contracts   ← agree together in hour 1
-  src/server/meta/           campaign import, asset resolution, publisher, readback
-  src/server/browser/        Playwright page capture
-  src/server/workflow/       job state machine, retries, approvals, journal
-  src/server/models/         Spark / Wonder / SAM adapters + prompts
-  src/server/repair/         masks, Chromium panel renderer, Sharp composite, pixel proof
-  src/server/http/           Hono web app: read API, media-by-id, SSE jobs, uploads (see §17)
-  src/web/                   no-framework TS UI (esbuild bundle), bilingual EN/HE (see §17)
-  fixtures/                  synthetic ads + demo landing pages (public)
-  tests/                     verdict rules, renderer, pixel proof, workflow, web API
-```
-Secrets (Meta token, Model API key) server-side only, never in repo or traces. Runtime artifacts gitignored.
-
-## 11. Test set (8 cases + fault checks)
-
-| Class | Cases |
-|---|---|
-| CLEAN | exact match; equivalent Hebrew phrasing |
-| AD_WRONG_REPAIRABLE | wrong % in panel; "free shipping" in panel when shipping is paid |
-| AD_WRONG_UNSAFE | offer text overlaps the product |
-| PAGE_WRONG | page shows a different discount than the spec |
-| AMBIGUOUS | "selected products" with no identified scope |
-| Held-out / unseen | one case the teammate authors after prompts freeze |
-
-If the budget reaches ~36+ person-hours, grow toward Instinct's set: 20 cases (4 per verdict, PAGE_WRONG including both-sides-wrong), 12 for development and 8 held-out **frozen before any prompt tuning**, with different products / phrasing / layout. Vary: selected vs all products, "up to" vs exact discount, free vs paid shipping, expiry, minimum spend / codes, image-vs-caption conflict, Hebrew + numerals + Latin brand names. One developer labels, the other checks.
-
-Invariant / fault checks (separate): page timeout · empty SAM mask · wrong mask dimensions · panel overlaps product · Meta API error · source changed after approval · double-click approve · timeout after POST · page text trying to instruct the agent · both sides wrong · image and caption disagree · a CLEAN ad never creates a repair or publish job.
-Report with denominators: confusion matrix, repair precision, unsafe repairs attempted (target 0), wrong-as-CLEAN count, preservation pass count, sweep time, model cost. Never feed labels or fixture names to the extractor. Label the fixtures as synthetic in the video.
-
-## 12. Day-1 kill tests (before any UI)
-
-| Test | Pass | If it fails |
-|---|---|---|
-| Meta write path | upload → creative → PAUSED ad → correct readback on our own account | fix permissions/config first; nothing else matters until this works |
-| Hebrew extraction | Spark reads the right facts from one clean + one wrong ad image | enlarged crops; keep abstention |
-| SAM masks | usable product + logo masks | box prompts; narrow the asset family |
-| Repair proof | readable Hebrew panel; zero diff inside masks and outside panel | fix renderer before anything else |
-| Page evidence | mobile capture + quotes support the right comparison | stick to our own demo pages |
-
-A failed test means narrowing that interface (one verified identity/ad format, human-confirmed geometry/masks, a more legible badge) — never quietly swapping in a mock for a failed API integration. Any replay mode is labeled as such.
-
-## 13. Schedule (~28 person-hours core; extra hours → hardening, not features)
-
-| When | Oz | Evyatar |
-|---|---|---|
-| Thu 29.10 PM | Meta write-path probe; campaign import | Spark extraction probe; SAM masks |
-| Fri 30.10 AM | page capture; shared schemas | Chromium Hebrew panel + pixel proof |
-| Sat | — | — |
-| Sun 1.11 | job state machine + evidence snapshots; sweep UI | comparison rules + Wonder stage; repair gates |
-| Mon 2.11 | approval-bound publisher + readback; evidence view | full repair + revalidation; repair diff view; dev cases |
-| Tue 3.11 | trace view; failure handling; README · **feature freeze** | held-out cases; fix only real failures |
-| Wed 4.11 | final live run + recording; submission check | close-ups, edit/export video; submit by evening |
-
-Same plan as a cumulative person-hour budget (Instinct, 36h baseline, both people together):
-
-| Hours | Work |
-|---|---|
-| 0–2 | contracts/schemas, fixture definitions, permissions and safety boundaries |
-| 2–8 | parallel kill tests: Meta API, image/SAM/renderer, page capture |
-| 8–14 | collection, claim extraction, comparison, evidence |
-| 14–22 | repair, SAM coverage, Hebrew layout, pixel proof |
-| 22–27 | sweep / evidence / approval UI, journal, readback |
-| 27–32 | held-out evaluation, refusals, stale-approval and timeout tests |
-| 32–36 | video, README, clean-clone rehearsal, submission buffer |
-
-If we only get ~28 hours: cut animated traces, extra layouts and the optional Wonder escalation — **never** approval, evidence, refusal, pixel checks or readback. If we get ~44: spend the extra on robustness and recording, not features. Integrate early; Wednesday is for validation, recording and submission, not first integration.
-
-Prerequisites to sort before Thursday's probes: a campaign + ad set (paused) in our own agency ad account and its Page · Model API key (credit card added; $150 credit pending) · a public host for the demo landing pages (e.g. GitHub Pages) · the new public repo · Muse Code installed.
-
-## 14. Demo video (3:00)
-
-| Time | Scene |
-|---|---|
-| 0:00–0:20 | Problem: the approved offer changed, an old image still promises the wrong deal. Say the fixtures are synthetic, in our own account. |
-| 0:20–0:45 | Confirm the short spec, sweep the campaign, real verdict counts. |
-| 0:45–1:15 | Open the AD_WRONG ad: ad quote, spec and page evidence side by side. |
-| 1:15–1:50 | SAM overlay → panel → Hebrew before/after → "0 protected pixels changed, 0 outside panel" → fresh Spark check. |
-| 1:50–2:10 | CLEAN left untouched; overlap case refused; PAGE_WRONG flagged, not "fixed". |
-| 2:10–2:40 | Approve → upload → creative → PAUSED ad → readback IDs; original ad unchanged. |
-| 2:40–3:00 | Held-out results with denominators, real tool timeline, honest limits, public repo. |
-
-English narration/subtitles; Hebrew stays visible. Label any cached or sped-up part. Keep a labeled recorded fallback for network failure — never fake API results.
-
-## 15. Top risks
-
-| Risk | Mitigation |
-|---|---|
-| Accusing or "fixing" a valid ad | confirmed spec, evidence-backed claims, explicit unknowns, fresh revalidation |
-| Preservation claimed over incomplete masks | visible masks + zero change outside the edit rectangle |
-| Hebrew panel breaks or old text remains | one opaque panel family, full-image claim scan, bundled font, overflow check, refusal |
-| Meta API fails or duplicates | prove the write path on day 1, one config, operation journal, reconcile uncertain POSTs |
-| Scope eats the video time | one campaign, one format, no cart, no Muse Image, freeze Tuesday |
-
-## 16. Stretch (only if everything above works by Monday evening)
-
-Bounded "deep check": when the page says "selected products" or "see terms" and the facts are behind a click, run a short computer-use loop (Spark 1.3 or Wonder, `tools:[{type:"computer"}]`, Playwright driver, max ~8 steps, allowlisted domain, safety checks surfaced) and feed the revealed text back as evidence. This makes the agent's behaviour more visible in the video, but it is not needed for the core.
-
-## 17. Web app (as built, Oct 31 — overrides §1 decision 2's Express/React)
-
-Hono + `@hono/node-server` (`src/server/http/`, `createApp(deps)` factory for
-in-process tests), 127.0.0.1:`OFFER_GUARD_PORT` (3023), all routes under
-`OFFER_GUARD_BASE_PATH` (`/`; `/offer-guard/` behind nginx in production).
-No-framework TypeScript UI (`src/web/`, esbuild → `dist/web/`), one CSS file,
-bundled Noto Sans + Noto Sans Hebrew, no CDN. All UI strings bilingual via
-`src/shared/i18n.ts` (keys + vars over the wire, never English text).
-
-- Read API: `GET /api/campaign` (spec + latest finished run + per-ad rows),
-  `GET /api/ads/:id` (evidence, comparison, findings, verdict, question,
-  repair/refusal, trace), `GET /api/runs/:id/trace`.
-- Media by record id (`/media/:kind/:id`, realpath containment), thumbnails
-  and diff heatmaps generated once into `artifacts/web-cache/`; demo pages at
-  `/pages/`; errors are `{error: <i18n key>}`.
-- Live jobs: fresh sweep + own-ad check, one at a time, queue ≤ 3, per-IP
-  3/hour, daily model-call cap in SQLite, `OFFER_GUARD_LIVE=off` kill switch,
-  SSE progress with polling fallback. Own-ad uploads re-encoded via sharp
-  (JPEG/PNG by content, ≤5 MB, ≤12 MP) under `data/uploads/`, deleted after 24 h.
-- Publishing stays out: the PAUSED button is disabled ("owner only").
-- Additive backend hooks (no rewrites): `snapshot_source` + `snapshot_evidence`
-  tables, SAM masks persisted to the repair dir, `expectedPath` nullable for
-  ad-hoc checks.
+Template SAM masks persist only for the logo (overlay + record); frame
+pixels come from the uploaded frame overlay, logo/product pixels from the
+source. No Wonder/computer-use: the pipeline needs no investigation stage.
+No Graph API at all (a test enforces the module graph has no ad-platform
+write imports). No confidence scores anywhere — proofs and QA verdicts only.

@@ -1,154 +1,102 @@
-# Offer Guard
+# AdFit — one creative → every placement size
 
-Verify that ad promises match the approved offer — and build a PAUSED, pixel-proven
-replacement when they don't. Meta Global AI Developer Hackathon (Indie track).
+Our studio adapts every approved creative to 6–8 placement sizes by hand,
+every day, for 100+ brands. Generic AI resizers redraw the product, break
+Hebrew lettering and ignore the brand's own layout rules for each size.
+AdFit adapts with Meta's models and is trustworthy: brand templates per size,
+protected product/logo pixels with proof, and a model QA check on every
+output.
 
-Design source of truth: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Upload a finished creative, pick a brand and sizes, get every placement back —
+in **Protected** mode (AI paints only the background; product, logo and text
+go back as original pixels, with a pixel proof) or **Fast** mode (AI
+recomposes the whole creative in one pass). A brand teaches its layout per
+size through **templates**: past finished creatives that Spark reads into a
+stored layout spec. Every output is QA-checked by a fresh Spark call; on FAIL
+it retries once, then marks the output "needs review".
 
-## Status
+Everything is bilingual (English default, Hebrew toggle, RTL). All demo
+brands are synthetic and fictional; nothing is ever published.
 
-Campaign sweep backend live (Oct 29–30): `npm run sweep -- --manifest fixtures/campaign.json --fresh`
-checks all 12 demo ads (6 cases × he/en) end to end — snapshot → Spark ad
-extraction → Playwright page capture → Spark page extraction → code verdict →
-repair for AD_WRONG_REPAIRABLE — and stores snapshots, claims, findings,
-captures, repair artifacts and the tool-call trace in `data/offer-guard.db`.
-Fresh run: 12/12 PASS (32 model calls, ~115k tokens); second run: 12/12 cache
-hits, 0 model calls. `PAGE_WRONG` fires on the 25% page despite its prompt
-injection; `AMBIGUOUS` asks one focused question; repairs carry zero-diff
-pixel proof + passing revalidation. Graph API untouched (seed script is dry-run
-only until a human runs `--execute`).
+## How it works
 
-Day-1 model kill tests (Oct 29, live Model API calls, read-only; Graph API untouched).
-Both Hebrew and English ads are supported (6 fixtures); scripts print English
-by default, `--lang he` for Hebrew.
+1. **Spark** (`muse-spark-1.3`) reads the source creative: products, logo,
+   verbatim headline/sub-text, offer/CTA panel, background style,
+   language/direction.
+2. **SAM** (`sam-3.1`) cuts exact product and logo masks (phrase + box-prompt
+   union); code plans the layout from the brand template for that size, or
+   from default rules (logo top corner by direction, product centered in the
+   safe area, panel bottom).
+3. **Muse Image** (`muse-image-1.0`) paints the background plate (Protected)
+   or recomposes the whole creative (Fast). The wire size is aspect-only, so
+   code cover-fits every output to the exact preset and verifies.
+4. Code places the original pixels (uniform scale only, recorded), re-renders
+   free text verbatim in Chromium with bundled Noto fonts, copies opaque
+   panels as pixel blocks, and applies the brand frame overlay last.
+5. A fresh **Spark** call QA-checks every output against the source analysis:
+   every verbatim text exact, logo/product present and uncropped, safe area
+   respected, no invented text.
 
-- **Repair proof** — `npm run killtest:repair`: ALL PASS on all 6 ads
-  (Oct 29 rerun). ad-01 clean (he+en) → CLEAN, no repair; ad-02 wrong (he+en)
-  → repaired with zero-diff pixel proof (0 changed outside the panel, 0 in the
-  protected mask), PNG round-trip OK, fresh-Spark revalidation PASS; ad-03
-  overlap (he+en) → REFUSED with `panel_not_opaque` + `panel_overlaps_protected`.
-  Panel snap hits {x:90,y:840,w:900,h:170} exactly on ad-01/ad-02 (both
-  languages) from rough Spark boxes; the logo mask is the union of the `logo`
-  phrase (circle mark) and a box prompt on Spark's `logo_bbox` (wordmark).
-  Artifacts (gitignored) at `artifacts/repair/<ad>/`: before/after/panel/
-  masks/diff PNGs + proof, revalidation and result JSON.
-- **Ad extraction (Spark 1.3)** — `npm run killtest:spark`: all semantic
-  fields PASS on all 6 ads (language he/en correct, percent/scope/shipping/
-  valid_until exact, verbatim offer words, tagline never listed as an offer,
-  panel opaque correct). Panel bbox IoU passes the Hebrew ads (0.88/0.82/0.95)
-  and ad-03-en (0.93) but the English bottom-panel ads score 0.66 — Spark boxes
-  the text block plus padding instead of the full panel edges (same known
-  roughness as Hebrew ad-01's 0.66 in the first run; threshold kept — the
-  repair pipeline never uses the rough box directly, it snaps to exact edges).
-  JSON-schema `response_format` works; coordinates come back in source pixels.
-- **Protection masks (SAM 3.1)** — `npm run killtest:sam`: ALL PASS on ad-02 +
-  ad-03. First phrases worked (`bottle`, `logo`; no box fallback needed);
-  product mask IoU 0.99/1.00 with fill 0.89/0.55; ad-02 protected∩panel = 0 px
-  (repair allowed); ad-03 protected∩panel = 1506 px (correct
-  "panel overlaps protected product" blocker). Overlays at
-  `artifacts/killtests/sam-<ad>.png` (gitignored) for human inspection.
-  Follow-up: `logo` segments the circle mark only, not the wordmark — the
-  repair pipeline protects both (union of the phrase mask and a box prompt on
-  Spark's `logo_bbox`).
+## Meta models used where
 
-## Web app (the demo judges open)
+| Step | Model | What |
+|---|---|---|
+| Source analysis | `muse-spark-1.3` | elements + verbatim texts + background |
+| Template reading | `muse-spark-1.3` | layout spec per size (zones 0–1) |
+| Masks | `sam-3.1` | product/logo/frame masks |
+| Generation | `muse-image-1.0` | background plate or full recompose |
+| QA | `muse-spark-1.3` | fresh PASS/FAIL read of every output |
+| Brand match | `muse-spark-1.3` | propose a brand for an upload |
 
-```sh
-npm run web       # build the UI bundle + serve on http://127.0.0.1:3023/
-npm run web:dev   # same, rebuilding the bundle on change
-```
+## Run
 
-Campaign home with the approved offer, five verdict counters, the ad grid with
-saved/fresh labels, one "Run fresh analysis" button (live progress per ad),
-per-ad evidence (spec · ad quotes with crops · page quotes with highlighted
-captures), before/after slider with SAM-mask and heatmap overlays plus the
-three proof numbers, refusal/page/ambiguous views, the recorded tool-call
-trace, a bounded "Check your own ad" page, and an About page. Everything is
-bilingual (English default, Hebrew toggle, RTL when Hebrew); no framework, no
-CDN — fonts and bundle are served by our own server.
-
-Public vs owner-only: everything in the web app is read-only except two
-bounded live actions (fresh sweep, own-ad check — one at a time, per-IP and
-daily caps, kill switch `OFFER_GUARD_LIVE=off`). Publishing a PAUSED
-replacement ad is owner-only and not in this app — the button is present but
-disabled ("owner only — signed-in view").
-
-Env (see `.env.example`, no secrets there): `OFFER_GUARD_PORT` (default 3023),
-`OFFER_GUARD_BASE_PATH` (default `/`; production `/offer-guard/` behind nginx),
-`OFFER_GUARD_LIVE=on|off`, `OFFER_GUARD_TRUST_PROXY=0|1`,
-`OFFER_GUARD_DAILY_MODEL_CALLS` (default 300).
-
-## Day-1 probe
-
-Proves the Meta write path on our own account: upload a test image, create a
-PAUSED ad in our PAUSED ad set, and read it back. Nothing else is touched —
-no existing ads are edited, no budgets, no campaigns or ad sets.
-
-Setup:
-
-```sh
-cp .env.example .env   # then fill in the real IDs + token (never commit .env)
+```bash
 npm install
+npm run web        # build the UI + start on http://127.0.0.1:3023/
 ```
 
-Run (dry run is the default — POSTs are printed, not sent):
+The Model API key lives **outside the repo** in
+`~/.config/offer-guard/secrets.env` (`MODEL_API_KEY=…`, chmod 600) —
+the historical path, kept after the AdFit pivot. Non-secret settings go in
+`.env` (see `.env.example`).
 
-```sh
-npm run probe:meta              # dry run: safe reads + local test image only
-npm run probe:meta -- --execute # actually create the PAUSED probe ad
-```
+Useful commands:
 
-Every step is logged to the console and appended to `.local/probe-journal.jsonl`
-(gitignored; request summaries never contain the token).
-
-Clean up the probe objects (only the IDs recorded in the journal, nothing else):
-
-```sh
-npm run cleanup:probe              # dry run: list what would be deleted
-npm run cleanup:probe -- --execute # delete the probe ads + creatives
-```
-
-Safety details: the ad set must exist and must NOT be ACTIVE or the probe aborts;
-the only status ever sent is `PAUSED`; a timed-out POST is never retried blindly
-(the probe looks the object up by name first); Graph errors print `code`,
-`error_subcode`, `error_user_msg` and `fbtrace_id`, then stop.
-
-## Tests
-
-```sh
-npm test        # vitest: config, masking, PAUSED guard, repair units, verdict rules,
-                # capture guard, quote verification, store/cache, campaign adapter (mocked),
-                # web API + media + upload + rate-limit + i18n-parity tests (in-process)
+```bash
+npm test                    # unit tests (no network)
 npm run typecheck
-npm run sweep -- --manifest fixtures/campaign.json --fresh  # live sweep (Model API, read-only)
-npm run sweep -- --manifest fixtures/campaign.json          # same, from cache (no model calls)
-npm run sweep -- --manifest fixtures/campaign.json --lang he  # same, Hebrew output
-npm run render:fixtures             # regenerate the 12 ad PNGs from fixtures/src/ad.html
-npm run seed:campaign               # dry run: payloads for one PAUSED ad per manifest entry
-npm run killtest:repair            # live repair proof on all 6 ads (Model API, read-only)
-npm run killtest:repair -- --lang he  # same, Hebrew output
+npm run render:adfit-fixtures   # regenerate synthetic brand assets
+npm run adfit:live              # live batch: all sizes × modes + demo export
+npm run ui-shots                # Playwright screenshot matrix → artifacts/ui/
 ```
 
-The repair renderer needs Chromium once: `npx playwright install chromium`.
-Panel fonts are bundled Noto Sans + Noto Sans Hebrew (`@fontsource` packages,
-SIL Open Font License — license text in `node_modules/@fontsource/*/LICENSE`),
-loaded from local files at render time, never from the network.
+## Env vars (all `ADFIT_*`, see `.env.example`)
 
-## Layout
+`ADFIT_PORT` (3023) · `ADFIT_BASE_PATH` (/) · `ADFIT_LIVE` (on/off kill
+switch) · `ADFIT_TRUST_PROXY` (0) · `ADFIT_DAILY_MODEL_CALLS` (300) ·
+`ADFIT_DAILY_IMAGES` (200) · `ADFIT_RATE_PER_HOUR` (3) ·
+`ADFIT_QUEUE_MAX` (3) · `ADFIT_JOB_TIMEOUT_MS` · `ADFIT_UPLOAD_MAX_BYTES`
+(10 MB) · `ADFIT_UPLOAD_MAX_PIXELS` (24 MP). Model names/keys:
+`MODEL_API_KEY`, `MODEL_API_BASE`, `MODEL_EXTRACT`, `MODEL_SAM`,
+`MODEL_IMAGE`.
 
-`src/shared` (schemas, config, guards, i18n, verdict) ·
-`src/server/meta|browser|workflow|models|repair|pages|store` ·
-`src/server/http` (Hono app: read API, media, jobs, uploads) ·
-`src/web` (no-framework TS UI, esbuild bundle) ·
-`scripts` (probes, sweep, seed, fixture renderer, web build, UI screenshots) ·
-`fixtures/ads` (synthetic test ads, fictional brand) ·
-`fixtures/pages` (demo landing pages) ·
-`fixtures/campaign.json` (demo manifest) · `tests` (incl. `expected-verdicts.json`,
-local-only) · `data/` (gitignored SQLite store + uploads) · `.local` (gitignored
-runtime journal + generated images) · `artifacts/ui` (gitignored UI screenshots).
+## Limits and safety
 
-## How this was built
+- Kill switch (`ADFIT_LIVE=off`): live work refused, saved results keep working.
+- One heavy job at a time, queue ≤ 3, 3 live jobs/IP/hour, daily caps on
+  model calls **and** images, sizes of one job run 2 at a time.
+- Uploads: JPEG/PNG/WebP by content, ≤ 10 MB, ≤ 24 MP, re-encoded
+  (metadata stripped, huge photos normalized to 1600 px), deleted after 24 h;
+  visitor brands/templates expire after 24 h too. Max 3 sources × 8 sizes
+  per job. Demo brands are permanent fixtures.
+- The product name is one string in `src/shared/brand.ts`.
 
-Everything in this repository was written during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026), mostly with **Muse Code**, Meta's coding agent.
-The commit history is the timeline of the work. After each Muse Code session we export its redacted log (`npm run buildlog:save -- <label>`); these logs are kept outside the public repo and can be shared with the judges on request.
-The session-by-session log and the exact prompts are in [docs/build/BUILD_LOG.md](docs/build/BUILD_LOG.md).
+## Honest limitations
+
+- Synthetic demo brands only — no real advertisers in this demo.
+- Single-image creatives with one clear product and one logo work best.
+- Fast mode redraws pixels; only Protected mode carries a pixel proof (a
+  soft 1–2 px feather is allowed only outside the mask core).
+- The QA check reads pixels, not intent; "needs review" means a human looks.
+- Pixel identity is for our exported PNG; platforms may recompress after upload.
+- `docs/build/` is the honest build history, including the Offer Guard era.

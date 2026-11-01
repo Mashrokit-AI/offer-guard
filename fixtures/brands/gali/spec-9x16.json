@@ -1,0 +1,55 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.315,
+      "y": 0.86,
+      "w": 0.37,
+      "h": 0.06
+    },
+    "corner": "other"
+  },
+  "headline_zone": {
+    "x": 0.325,
+    "y": 0.11,
+    "w": 0.35,
+    "h": 0.055
+  },
+  "subtext_zone": {
+    "x": 0.31,
+    "y": 0.065,
+    "w": 0.38,
+    "h": 0.03
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.1,
+      "y": 0.682,
+      "w": 0.8,
+      "h": 0.075
+    },
+    "color": "#ff5a3c",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.362,
+    "y": 0.262,
+    "w": 0.236,
+    "h": 0.375
+  },
+  "frames": [
+    {
+      "box": {
+        "x": 0,
+        "y": 0.79,
+        "w": 1,
+        "h": 0.21
+      },
+      "color": "#134e5e",
+      "edge": "bottom",
+      "kind": "band"
+    }
+  ],
+  "background_style": "pale mint solid fill #d9ece9 on upper area with solid dark teal footer",
+  "text_align": "center",
+  "direction": "rtl"
+}

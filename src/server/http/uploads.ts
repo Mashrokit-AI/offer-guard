@@ -4,10 +4,9 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 /**
- * Own-ad uploads: JPEG/PNG only **by content** (sharp decode, not the
- * extension), bounded bytes and pixels, re-encoded to strip metadata.
- * Stored under data/uploads/<id>/ad.png — never under tracked dirs —
- * and deleted after 24 h.
+ * Uploads: JPEG/PNG/WebP **by content** (sharp decode, not the extension),
+ * bounded bytes and pixels, re-encoded to strip metadata. Stored under
+ * data/uploads/<id>/ — never under tracked dirs — and deleted after 24 h.
  */
 
 export interface StoredUpload {
@@ -33,6 +32,8 @@ export async function validateAndStoreUpload(
   raw: Buffer,
   maxBytes: number,
   maxPixels: number,
+  subdir = 'uploads',
+  fileName = 'image.png',
 ): Promise<StoredUpload> {
   if (raw.length === 0 || raw.length > maxBytes) {
     throw new UploadError(raw.length > maxBytes ? 'err_too_large' : 'err_bad_image');
@@ -43,29 +44,80 @@ export async function validateAndStoreUpload(
   } catch {
     throw new UploadError('err_bad_image');
   }
-  if (meta.format !== 'jpeg' && meta.format !== 'png') throw new UploadError('err_bad_image');
+  if (meta.format !== 'jpeg' && meta.format !== 'png' && meta.format !== 'webp') {
+    throw new UploadError('err_bad_image');
+  }
   const width = meta.width ?? 0;
   const height = meta.height ?? 0;
   if (!width || !height) throw new UploadError('err_bad_image');
   if (width * height > maxPixels) throw new UploadError('err_too_many_pixels');
   // Re-encode: a fresh PNG carries no EXIF/XMP and neutralizes polyglots.
+  // Downscale huge photos to 1600 px on the long edge (never upscale): the
+  // stored file is the source of truth for both model calls and compositing,
+  // and 1600 px covers every placement preset without giant payloads.
   let png: Buffer;
+  let outW = width;
+  let outH = height;
   try {
-    png = await sharp(raw).png().toBuffer();
+    const edge = Math.max(width, height);
+    const pipe = edge > 1600 ? sharp(raw).resize(1600, 1600, { fit: 'inside', withoutEnlargement: true }) : sharp(raw);
+    png = await pipe.ensureAlpha().png().toBuffer();
+    if (edge > 1600) {
+      const scale = 1600 / edge;
+      outW = Math.round(width * scale);
+      outH = Math.round(height * scale);
+    }
   } catch {
     throw new UploadError('err_bad_image');
   }
-  const id = `own-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
-  const dir = join(repoRoot, 'data', 'uploads', id);
+  const id = `up-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
+  const dir = join(repoRoot, 'data', subdir, id);
   const { mkdir, writeFile } = await import('node:fs/promises');
   await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, 'ad.png'), png);
-  return { id, relPath: `data/uploads/${id}/ad.png`, bytes: png.length, width, height };
+  await writeFile(join(dir, fileName), png);
+  return { id, relPath: `data/${subdir}/${id}/${fileName}`, bytes: png.length, width: outW, height: outH };
+}
+
+/**
+ * Validate image bytes without storing anything: JPEG/PNG/WebP by content,
+ * bounded bytes and pixels, re-encoded in memory (metadata stripped).
+ */
+export async function validateImageBytes(
+  raw: Buffer,
+  maxBytes: number,
+  maxPixels: number,
+): Promise<{ bytes: Buffer; width: number; height: number }> {
+  if (raw.length === 0 || raw.length > maxBytes) {
+    throw new UploadError(raw.length > maxBytes ? 'err_too_large' : 'err_bad_image');
+  }
+  let meta: sharp.Metadata;
+  try {
+    meta = await sharp(raw).metadata();
+  } catch {
+    throw new UploadError('err_bad_image');
+  }
+  if (meta.format !== 'jpeg' && meta.format !== 'png' && meta.format !== 'webp') {
+    throw new UploadError('err_bad_image');
+  }
+  const width = meta.width ?? 0;
+  const height = meta.height ?? 0;
+  if (!width || !height) throw new UploadError('err_bad_image');
+  if (width * height > maxPixels) throw new UploadError('err_too_many_pixels');
+  try {
+    const edge = Math.max(width, height);
+    const pipe = edge > 1600 ? sharp(raw).resize(1600, 1600, { fit: 'inside', withoutEnlargement: true }) : sharp(raw);
+    const bytes = await pipe.ensureAlpha().png().toBuffer();
+    if (edge <= 1600) return { bytes, width, height };
+    const scale = 1600 / edge;
+    return { bytes, width: Math.round(width * scale), height: Math.round(height * scale) };
+  } catch {
+    throw new UploadError('err_bad_image');
+  }
 }
 
 /** Delete upload dirs older than maxAgeMs. Returns the number removed. */
-export async function cleanupUploads(repoRoot: string, maxAgeMs: number): Promise<number> {
-  const root = join(repoRoot, 'data', 'uploads');
+export async function cleanupUploads(repoRoot: string, maxAgeMs: number, subdir = 'uploads'): Promise<number> {
+  const root = join(repoRoot, 'data', subdir);
   let entries: string[];
   try {
     entries = await readdir(root);

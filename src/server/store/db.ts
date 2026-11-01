@@ -3,192 +3,152 @@ import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS offer_spec (
-  version INTEGER PRIMARY KEY,
-  spec_json TEXT NOT NULL,
-  created_at TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS brand (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  colors_json TEXT NOT NULL,
+  fonts_json TEXT NOT NULL,
+  logo_path TEXT,
+  is_demo INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT
 );
-CREATE TABLE IF NOT EXISTS campaign_run (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  started_at TEXT NOT NULL,
-  finished_at TEXT,
-  manifest_path TEXT NOT NULL,
-  fresh INTEGER NOT NULL,
-  pages_base TEXT NOT NULL,
-  spec_version INTEGER NOT NULL
+CREATE TABLE IF NOT EXISTS template (
+  id TEXT PRIMARY KEY,
+  brand_id TEXT NOT NULL REFERENCES brand(id),
+  preset TEXT,
+  image_path TEXT NOT NULL,
+  spec_json TEXT,
+  status TEXT NOT NULL,
+  error TEXT,
+  frame_path TEXT,
+  created_at TEXT NOT NULL,
+  expires_at TEXT
 );
-CREATE TABLE IF NOT EXISTS source_snapshot (
+CREATE INDEX IF NOT EXISTS idx_template_brand ON template(brand_id);
+CREATE TABLE IF NOT EXISTS source (
+  id TEXT PRIMARY KEY,
+  image_path TEXT NOT NULL,
+  width INTEGER NOT NULL,
+  height INTEGER NOT NULL,
+  analysis_json TEXT,
+  masks_json TEXT,
+  brand_id TEXT,
+  created_at TEXT NOT NULL,
+  expires_at TEXT
+);
+CREATE TABLE IF NOT EXISTS job (
+  id TEXT PRIMARY KEY,
+  brand_id TEXT,
+  mode TEXT NOT NULL,
+  sizes_json TEXT NOT NULL,
+  sources_json TEXT NOT NULL,
+  status TEXT NOT NULL,
+  error TEXT,
+  model_calls INTEGER NOT NULL,
+  image_calls INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  finished_at TEXT
+);
+CREATE TABLE IF NOT EXISTS output (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  run_id INTEGER NOT NULL REFERENCES campaign_run(id),
-  ad_key TEXT NOT NULL,
-  image_sha256 TEXT NOT NULL,
-  image_bytes INTEGER NOT NULL,
-  copy TEXT NOT NULL,
-  landing_url TEXT NOT NULL,
-  cache_key TEXT NOT NULL,
-  capture_time TEXT NOT NULL,
-  original_capture_time TEXT,
-  verdict TEXT NOT NULL,
-  expected TEXT NOT NULL,
-  pass INTEGER NOT NULL,
-  cached INTEGER NOT NULL,
+  job_id TEXT NOT NULL REFERENCES job(id),
+  source_id TEXT NOT NULL,
+  preset TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  status TEXT NOT NULL,
+  image_path TEXT NOT NULL,
+  plan_json TEXT NOT NULL,
+  proof_json TEXT,
+  qa_json TEXT,
+  retries INTEGER NOT NULL,
+  model_calls INTEGER NOT NULL,
+  image_calls INTEGER NOT NULL,
   latency_ms INTEGER NOT NULL,
-  model_calls INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_snapshot_cache ON source_snapshot(cache_key);
-CREATE TABLE IF NOT EXISTS page_capture (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  snapshot_id INTEGER NOT NULL REFERENCES source_snapshot(id),
-  requested_url TEXT NOT NULL,
-  final_url TEXT NOT NULL,
-  capture_time TEXT NOT NULL,
-  screenshot_paths TEXT NOT NULL,
-  chunks_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS claim (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  snapshot_id INTEGER NOT NULL REFERENCES source_snapshot(id),
-  source TEXT NOT NULL,
-  field TEXT NOT NULL,
-  normalized TEXT NOT NULL,
-  verbatim TEXT NOT NULL,
-  evidence_id TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS finding (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  snapshot_id INTEGER NOT NULL REFERENCES source_snapshot(id),
-  kind TEXT NOT NULL,
-  side TEXT,
-  field TEXT,
-  spec_value TEXT,
-  observed_value TEXT,
-  evidence_ids_json TEXT NOT NULL,
-  detail TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS repair_artifact (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  snapshot_id INTEGER NOT NULL REFERENCES source_snapshot(id),
-  before_sha256 TEXT NOT NULL,
-  after_sha256 TEXT NOT NULL,
-  digest TEXT NOT NULL,
-  proof_json TEXT NOT NULL,
-  revalidation_json TEXT NOT NULL,
-  artifact_dir TEXT NOT NULL,
+  trace_json TEXT NOT NULL,
+  error TEXT,
   created_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS trace_event (
+CREATE INDEX IF NOT EXISTS idx_output_job ON output(job_id);
+CREATE TABLE IF NOT EXISTS usage (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  snapshot_id INTEGER NOT NULL REFERENCES source_snapshot(id),
-  seq INTEGER NOT NULL,
-  step TEXT NOT NULL,
-  tool_or_model TEXT NOT NULL,
-  input_summary TEXT NOT NULL,
-  output_summary TEXT NOT NULL,
-  duration_ms INTEGER NOT NULL,
-  evidence_ids_json TEXT NOT NULL,
-  next_state TEXT NOT NULL,
-  cached INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS snapshot_source (
-  snapshot_id INTEGER PRIMARY KEY REFERENCES source_snapshot(id),
-  image_path TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS snapshot_evidence (
-  snapshot_id INTEGER PRIMARY KEY REFERENCES source_snapshot(id),
-  ad_json TEXT,
-  page_json TEXT
+  created_at TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  count INTEGER NOT NULL
 );
 `;
 
-export interface SnapshotRow {
-  id: number;
-  run_id: number;
-  ad_key: string;
-  image_sha256: string;
-  image_bytes: number;
-  copy: string;
-  landing_url: string;
-  cache_key: string;
-  capture_time: string;
-  original_capture_time: string | null;
-  verdict: string;
-  expected: string;
-  pass: number;
-  cached: number;
-  latency_ms: number;
+export interface BrandRow {
+  id: string;
+  name: string;
+  colors_json: string;
+  fonts_json: string;
+  logo_path: string | null;
+  is_demo: number;
+  created_at: string;
+  expires_at: string | null;
+}
+
+export interface TemplateRow {
+  id: string;
+  brand_id: string;
+  preset: string | null;
+  image_path: string;
+  spec_json: string | null;
+  status: string;
+  error: string | null;
+  frame_path: string | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+export interface SourceRow {
+  id: string;
+  image_path: string;
+  width: number;
+  height: number;
+  analysis_json: string | null;
+  masks_json: string | null;
+  brand_id: string | null;
+  created_at: string;
+  expires_at: string | null;
+}
+
+export interface JobRow {
+  id: string;
+  brand_id: string | null;
+  mode: string;
+  sizes_json: string;
+  sources_json: string;
+  status: string;
+  error: string | null;
   model_calls: number;
-}
-
-export interface RunRow {
-  id: number;
-  started_at: string;
+  image_calls: number;
+  created_at: string;
   finished_at: string | null;
-  manifest_path: string;
-  fresh: number;
-  pages_base: string;
-  spec_version: number;
 }
 
-export interface SpecRow {
-  version: number;
-  spec_json: string;
+export interface OutputRow {
+  id: number;
+  job_id: string;
+  source_id: string;
+  preset: string;
+  mode: string;
+  status: string;
+  image_path: string;
+  plan_json: string;
+  proof_json: string | null;
+  qa_json: string | null;
+  retries: number;
+  model_calls: number;
+  image_calls: number;
+  latency_ms: number;
+  trace_json: string;
+  error: string | null;
   created_at: string;
 }
 
-export interface CaptureRow {
-  requested_url: string;
-  final_url: string;
-  capture_time: string;
-  screenshot_paths: string;
-  chunks_json: string;
-}
-
-export interface ClaimRow {
-  source: string;
-  field: string;
-  normalized: string;
-  verbatim: string;
-  evidence_id: string;
-}
-
-export interface FindingRow {
-  kind: string;
-  side: string | null;
-  field: string | null;
-  spec_value: string | null;
-  observed_value: string | null;
-  evidence_ids_json: string;
-  detail: string;
-}
-
-export interface RepairRow {
-  before_sha256: string;
-  after_sha256: string;
-  digest: string;
-  proof_json: string;
-  revalidation_json: string;
-  artifact_dir: string;
-  created_at: string;
-}
-
-export interface TraceRow {
-  seq: number;
-  step: string;
-  tool_or_model: string;
-  input_summary: string;
-  output_summary: string;
-  duration_ms: number;
-  evidence_ids_json: string;
-  next_state: string;
-  cached: number;
-}
-
-export interface CachedCheck {
-  snapshot: SnapshotRow;
-  capture: { requested_url: string; final_url: string; capture_time: string; screenshot_paths: string; chunks_json: string } | null;
-  claims: Array<{ source: string; field: string; normalized: string; verbatim: string; evidence_id: string }>;
-  findings: Array<{ kind: string; side: string | null; field: string | null; spec_value: string | null; observed_value: string | null; evidence_ids_json: string; detail: string }>;
-}
+const now = (): string => new Date().toISOString();
 
 export class Store {
   private readonly db: Database.Database;
@@ -208,170 +168,171 @@ export class Store {
     this.db.close();
   }
 
-  upsertSpec(version: number, specJson: string): void {
+  // --- brands ---
+
+  insertBrand(b: { id: string; name: string; colors: string[]; fonts: string[]; logoPath: string | null; isDemo: boolean; expiresAt: string | null }): void {
     this.db
-      .prepare('INSERT INTO offer_spec (version, spec_json, created_at) VALUES (?, ?, ?) ON CONFLICT(version) DO UPDATE SET spec_json=excluded.spec_json')
-      .run(version, specJson, new Date().toISOString());
+      .prepare('INSERT INTO brand (id, name, colors_json, fonts_json, logo_path, is_demo, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(b.id, b.name, JSON.stringify(b.colors), JSON.stringify(b.fonts), b.logoPath, b.isDemo ? 1 : 0, now(), b.expiresAt);
   }
 
-  createRun(input: { manifestPath: string; fresh: boolean; pagesBase: string; specVersion: number }): number {
-    const r = this.db
-      .prepare('INSERT INTO campaign_run (started_at, manifest_path, fresh, pages_base, spec_version) VALUES (?, ?, ?, ?, ?)')
-      .run(new Date().toISOString(), input.manifestPath, input.fresh ? 1 : 0, input.pagesBase, input.specVersion);
-    return Number(r.lastInsertRowid);
+  getBrand(id: string): BrandRow | null {
+    return (this.db.prepare('SELECT * FROM brand WHERE id=?').get(id) as BrandRow | undefined) ?? null;
   }
 
-  finishRun(runId: number): void {
-    this.db.prepare('UPDATE campaign_run SET finished_at=? WHERE id=?').run(new Date().toISOString(), runId);
+  allBrands(): BrandRow[] {
+    return this.db.prepare('SELECT * FROM brand ORDER BY is_demo DESC, name').all() as BrandRow[];
   }
 
-  insertSnapshot(s: Omit<SnapshotRow, 'id'>): number {
-    const r = this.db
-      .prepare(
-        `INSERT INTO source_snapshot
-         (run_id, ad_key, image_sha256, image_bytes, copy, landing_url, cache_key, capture_time,
-          original_capture_time, verdict, expected, pass, cached, latency_ms, model_calls)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        s.run_id, s.ad_key, s.image_sha256, s.image_bytes, s.copy, s.landing_url, s.cache_key,
-        s.capture_time, s.original_capture_time, s.verdict, s.expected, s.pass ? 1 : 0,
-        s.cached ? 1 : 0, s.latency_ms, s.model_calls,
-      );
-    return Number(r.lastInsertRowid);
+  deleteBrand(id: string): void {
+    this.db.prepare('DELETE FROM template WHERE brand_id=?').run(id);
+    this.db.prepare('DELETE FROM brand WHERE id=?').run(id);
   }
 
-  findByCacheKey(cacheKey: string): CachedCheck | null {
-    const snapshot = this.db.prepare('SELECT * FROM source_snapshot WHERE cache_key=? ORDER BY id DESC LIMIT 1').get(cacheKey) as SnapshotRow | undefined;
-    if (!snapshot) return null;
-    const capture = this.db.prepare('SELECT requested_url, final_url, capture_time, screenshot_paths, chunks_json FROM page_capture WHERE snapshot_id=?').get(snapshot.id) as CachedCheck['capture'];
-    const claims = this.db.prepare('SELECT source, field, normalized, verbatim, evidence_id FROM claim WHERE snapshot_id=? ORDER BY id').all(snapshot.id) as CachedCheck['claims'];
-    const findings = this.db.prepare('SELECT kind, side, field, spec_value, observed_value, evidence_ids_json, detail FROM finding WHERE snapshot_id=? ORDER BY id').all(snapshot.id) as CachedCheck['findings'];
-    return { snapshot, capture: capture ?? null, claims, findings };
+  setBrandLogo(id: string, logoPath: string): void {
+    this.db.prepare('UPDATE brand SET logo_path=? WHERE id=?').run(logoPath, id);
   }
 
-  insertCapture(c: { snapshotId: number; requestedUrl: string; finalUrl: string; captureTime: string; screenshotPaths: string[]; chunksJson: string }): void {
+  // --- templates ---
+
+  insertTemplate(t: { id: string; brandId: string; preset: string | null; imagePath: string; framePath: string | null; expiresAt: string | null }): void {
     this.db
-      .prepare('INSERT INTO page_capture (snapshot_id, requested_url, final_url, capture_time, screenshot_paths, chunks_json) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(c.snapshotId, c.requestedUrl, c.finalUrl, c.captureTime, JSON.stringify(c.screenshotPaths), c.chunksJson);
+      .prepare('INSERT INTO template (id, brand_id, preset, image_path, spec_json, status, error, frame_path, created_at, expires_at) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?)')
+      .run(t.id, t.brandId, t.preset, t.imagePath, 'pending', t.framePath, now(), t.expiresAt);
   }
 
-  insertClaim(c: { snapshotId: number; source: string; field: string; normalized: string; verbatim: string; evidenceId: string }): void {
-    this.db
-      .prepare('INSERT INTO claim (snapshot_id, source, field, normalized, verbatim, evidence_id) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(c.snapshotId, c.source, c.field, c.normalized, c.verbatim, c.evidenceId);
+  getTemplate(id: string): TemplateRow | null {
+    return (this.db.prepare('SELECT * FROM template WHERE id=?').get(id) as TemplateRow | undefined) ?? null;
   }
 
-  insertFinding(f: { snapshotId: number; kind: string; side: string | null; field: string | null; specValue: string | null; observedValue: string | null; evidenceIds: string[]; detail: string }): void {
-    this.db
-      .prepare('INSERT INTO finding (snapshot_id, kind, side, field, spec_value, observed_value, evidence_ids_json, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(f.snapshotId, f.kind, f.side, f.field, f.specValue, f.observedValue, JSON.stringify(f.evidenceIds), f.detail);
+  templatesForBrand(brandId: string): TemplateRow[] {
+    return this.db.prepare('SELECT * FROM template WHERE brand_id=? ORDER BY created_at').all(brandId) as TemplateRow[];
   }
 
-  insertRepairArtifact(a: { snapshotId: number; beforeSha256: string; afterSha256: string; digest: string; proofJson: string; revalidationJson: string; artifactDir: string }): void {
-    this.db
-      .prepare('INSERT INTO repair_artifact (snapshot_id, before_sha256, after_sha256, digest, proof_json, revalidation_json, artifact_dir, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(a.snapshotId, a.beforeSha256, a.afterSha256, a.digest, a.proofJson, a.revalidationJson, a.artifactDir, new Date().toISOString());
+  setTemplateReady(id: string, specJson: string): void {
+    this.db.prepare('UPDATE template SET spec_json=?, status=?, error=NULL WHERE id=?').run(specJson, 'ready', id);
   }
 
-  insertTrace(t: { snapshotId: number; seq: number; step: string; toolOrModel: string; inputSummary: string; outputSummary: string; durationMs: number; evidenceIds: string[]; nextState: string; cached: boolean }): void {
-    this.db
-      .prepare('INSERT INTO trace_event (snapshot_id, seq, step, tool_or_model, input_summary, output_summary, duration_ms, evidence_ids_json, next_state, cached) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(t.snapshotId, t.seq, t.step, t.toolOrModel, t.inputSummary, t.outputSummary, t.durationMs, JSON.stringify(t.evidenceIds), t.nextState, t.cached ? 1 : 0);
+  setTemplateFailed(id: string, error: string): void {
+    this.db.prepare('UPDATE template SET status=?, error=? WHERE id=?').run('failed', error, id);
   }
 
-  insertSource(snapshotId: number, imagePath: string): void {
-    this.db
-      .prepare('INSERT INTO snapshot_source (snapshot_id, image_path) VALUES (?, ?) ON CONFLICT(snapshot_id) DO UPDATE SET image_path=excluded.image_path')
-      .run(snapshotId, imagePath);
+  updateTemplateSpec(id: string, specJson: string): void {
+    this.db.prepare('UPDATE template SET spec_json=? WHERE id=?').run(specJson, id);
   }
 
-  copySource(fromSnapshotId: number, toSnapshotId: number): void {
-    this.db
-      .prepare('INSERT INTO snapshot_source (snapshot_id, image_path) SELECT ?, image_path FROM snapshot_source WHERE snapshot_id=?')
-      .run(toSnapshotId, fromSnapshotId);
+  setTemplatePreset(id: string, preset: string | null): void {
+    this.db.prepare('UPDATE template SET preset=? WHERE id=?').run(preset, id);
   }
 
-  getSource(snapshotId: number): string | null {
-    const row = this.db.prepare('SELECT image_path FROM snapshot_source WHERE snapshot_id=?').get(snapshotId) as { image_path: string } | undefined;
-    return row?.image_path ?? null;
+  setTemplateFrame(id: string, framePath: string): void {
+    this.db.prepare('UPDATE template SET frame_path=? WHERE id=?').run(framePath, id);
   }
 
-  insertEvidence(snapshotId: number, adJson: string | null, pageJson: string | null): void {
-    this.db
-      .prepare('INSERT INTO snapshot_evidence (snapshot_id, ad_json, page_json) VALUES (?, ?, ?) ON CONFLICT(snapshot_id) DO UPDATE SET ad_json=excluded.ad_json, page_json=excluded.page_json')
-      .run(snapshotId, adJson, pageJson);
+  deleteTemplate(id: string): void {
+    this.db.prepare('DELETE FROM template WHERE id=?').run(id);
   }
 
-  copyEvidence(fromSnapshotId: number, toSnapshotId: number): void {
-    this.db
-      .prepare('INSERT INTO snapshot_evidence (snapshot_id, ad_json, page_json) SELECT ?, ad_json, page_json FROM snapshot_evidence WHERE snapshot_id=?')
-      .run(toSnapshotId, fromSnapshotId);
-  }
-
-  getEvidence(snapshotId: number): { adJson: string | null; pageJson: string | null } | null {
-    const row = this.db.prepare('SELECT ad_json, page_json FROM snapshot_evidence WHERE snapshot_id=?').get(snapshotId) as { ad_json: string | null; page_json: string | null } | undefined;
-    if (!row) return null;
-    return { adJson: row.ad_json, pageJson: row.page_json };
-  }
-
-  // --- read helpers for the web API ---
-
-  getRun(runId: number): RunRow | null {
-    return (this.db.prepare('SELECT * FROM campaign_run WHERE id=?').get(runId) as RunRow | undefined) ?? null;
-  }
-
-  latestRunForManifest(manifestPath: string): RunRow | null {
+  /** Template for an exact size, else the brand default (preset NULL). */
+  templateForSize(brandId: string, preset: string): TemplateRow | null {
+    const exact = this.db
+      .prepare("SELECT * FROM template WHERE brand_id=? AND preset=? AND status='ready' AND spec_json IS NOT NULL ORDER BY created_at DESC LIMIT 1")
+      .get(brandId, preset) as TemplateRow | undefined;
+    if (exact) return exact;
     return (
-      (this.db.prepare('SELECT * FROM campaign_run WHERE manifest_path=? AND finished_at IS NOT NULL ORDER BY id DESC LIMIT 1').get(manifestPath) as RunRow | undefined) ?? null
+      (this.db
+        .prepare("SELECT * FROM template WHERE brand_id=? AND preset IS NULL AND status='ready' AND spec_json IS NOT NULL ORDER BY created_at DESC LIMIT 1")
+        .get(brandId) as TemplateRow | undefined) ?? null
     );
   }
 
-  getSnapshots(runId: number): SnapshotRow[] {
-    return this.db.prepare('SELECT * FROM source_snapshot WHERE run_id=? ORDER BY ad_key').all(runId) as SnapshotRow[];
+  // --- sources ---
+
+  insertSource(s: { id: string; imagePath: string; width: number; height: number; expiresAt: string | null }): void {
+    this.db
+      .prepare('INSERT INTO source (id, image_path, width, height, analysis_json, masks_json, brand_id, created_at, expires_at) VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?)')
+      .run(s.id, s.imagePath, s.width, s.height, now(), s.expiresAt);
   }
 
-  getSnapshot(snapshotId: number): SnapshotRow | null {
-    return (this.db.prepare('SELECT * FROM source_snapshot WHERE id=?').get(snapshotId) as SnapshotRow | undefined) ?? null;
+  getSource(id: string): SourceRow | null {
+    return (this.db.prepare('SELECT * FROM source WHERE id=?').get(id) as SourceRow | undefined) ?? null;
   }
 
-  getSpec(version: number): SpecRow | null {
-    return (this.db.prepare('SELECT * FROM offer_spec WHERE version=?').get(version) as SpecRow | undefined) ?? null;
+  setSourceAnalysis(id: string, analysisJson: string, masksJson: string, brandId: string | null): void {
+    this.db.prepare('UPDATE source SET analysis_json=?, masks_json=?, brand_id=? WHERE id=?').run(analysisJson, masksJson, brandId, id);
   }
 
-  latestSpec(): SpecRow | null {
-    return (this.db.prepare('SELECT * FROM offer_spec ORDER BY version DESC LIMIT 1').get() as SpecRow | undefined) ?? null;
+  // --- jobs ---
+
+  insertJob(j: { id: string; brandId: string | null; mode: string; sizes: string[]; sources: string[] }): void {
+    this.db
+      .prepare('INSERT INTO job (id, brand_id, mode, sizes_json, sources_json, status, error, model_calls, image_calls, created_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 0, ?, NULL)')
+      .run(j.id, j.brandId, j.mode, JSON.stringify(j.sizes), JSON.stringify(j.sources), 'running', now());
   }
 
-  allSpecs(): SpecRow[] {
-    return this.db.prepare('SELECT * FROM offer_spec ORDER BY version').all() as SpecRow[];
+  getJob(id: string): JobRow | null {
+    return (this.db.prepare('SELECT * FROM job WHERE id=?').get(id) as JobRow | undefined) ?? null;
   }
 
-  getCapture(snapshotId: number): CaptureRow | null {
-    return (this.db.prepare('SELECT requested_url, final_url, capture_time, screenshot_paths, chunks_json FROM page_capture WHERE snapshot_id=?').get(snapshotId) as CaptureRow | undefined) ?? null;
+  finishJob(id: string, status: string, error: string | null, modelCalls: number, imageCalls: number): void {
+    this.db.prepare('UPDATE job SET status=?, error=?, model_calls=?, image_calls=?, finished_at=? WHERE id=?').run(status, error, modelCalls, imageCalls, now(), id);
   }
 
-  getClaims(snapshotId: number): ClaimRow[] {
-    return this.db.prepare('SELECT source, field, normalized, verbatim, evidence_id FROM claim WHERE snapshot_id=? ORDER BY id').all(snapshotId) as ClaimRow[];
+  latestFinishedJob(limit = 5): JobRow[] {
+    return this.db.prepare("SELECT * FROM job WHERE status IN ('done','failed') ORDER BY created_at DESC LIMIT ?").all(limit) as JobRow[];
   }
 
-  getFindings(snapshotId: number): FindingRow[] {
-    return this.db.prepare('SELECT kind, side, field, spec_value, observed_value, evidence_ids_json, detail FROM finding WHERE snapshot_id=? ORDER BY id').all(snapshotId) as FindingRow[];
+  // --- outputs ---
+
+  insertOutput(o: {
+    jobId: string; sourceId: string; preset: string; mode: string; status: string; imagePath: string;
+    planJson: string; proofJson: string | null; qaJson: string | null; retries: number;
+    modelCalls: number; imageCalls: number; latencyMs: number; traceJson: string; error: string | null;
+  }): number {
+    const r = this.db
+      .prepare('INSERT INTO output (job_id, source_id, preset, mode, status, image_path, plan_json, proof_json, qa_json, retries, model_calls, image_calls, latency_ms, trace_json, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(o.jobId, o.sourceId, o.preset, o.mode, o.status, o.imagePath, o.planJson, o.proofJson, o.qaJson, o.retries, o.modelCalls, o.imageCalls, o.latencyMs, o.traceJson, o.error, now());
+    return Number(r.lastInsertRowid);
   }
 
-  getRepair(snapshotId: number): RepairRow | null {
-    return (this.db.prepare('SELECT before_sha256, after_sha256, digest, proof_json, revalidation_json, artifact_dir, created_at FROM repair_artifact WHERE snapshot_id=?').get(snapshotId) as RepairRow | undefined) ?? null;
+  getOutput(id: number): OutputRow | null {
+    return (this.db.prepare('SELECT * FROM output WHERE id=?').get(id) as OutputRow | undefined) ?? null;
   }
 
-  getTrace(snapshotId: number): TraceRow[] {
-    return this.db.prepare('SELECT seq, step, tool_or_model, input_summary, output_summary, duration_ms, evidence_ids_json, next_state, cached FROM trace_event WHERE snapshot_id=? ORDER BY seq').all(snapshotId) as TraceRow[];
+  outputsForJob(jobId: string): OutputRow[] {
+    return this.db.prepare('SELECT * FROM output WHERE job_id=? ORDER BY id').all(jobId) as OutputRow[];
   }
 
-  /** Sum of model_calls for snapshots of runs started at/after `sinceIso`. */
-  countModelCallsSince(sinceIso: string): number {
-    const row = this.db
-      .prepare('SELECT COALESCE(SUM(s.model_calls), 0) AS total FROM source_snapshot s JOIN campaign_run r ON s.run_id=r.id WHERE r.started_at >= ?')
-      .get(sinceIso) as { total: number };
+  // --- usage / daily caps ---
+
+  recordUsage(kind: 'model' | 'image', count: number): void {
+    if (count <= 0) return;
+    this.db.prepare('INSERT INTO usage (created_at, kind, count) VALUES (?, ?, ?)').run(now(), kind, count);
+  }
+
+  countUsageSince(sinceIso: string, kind: 'model' | 'image'): number {
+    const row = this.db.prepare('SELECT COALESCE(SUM(count), 0) AS total FROM usage WHERE created_at >= ? AND kind=?').get(sinceIso, kind) as { total: number };
     return row.total;
+  }
+
+  // --- expiry (visitor data; demo brands/sources are permanent) ---
+
+  /** Delete expired visitor brands/templates/sources; returns repo-rel paths to unlink. */
+  deleteExpired(beforeIso: string): string[] {
+    const paths: string[] = [];
+    for (const t of this.db.prepare('SELECT image_path, frame_path FROM template WHERE expires_at IS NOT NULL AND expires_at < ?').all(beforeIso) as Array<{ image_path: string; frame_path: string | null }>) {
+      paths.push(t.image_path);
+      if (t.frame_path) paths.push(t.frame_path);
+    }
+    this.db.prepare('DELETE FROM template WHERE expires_at IS NOT NULL AND expires_at < ?').run(beforeIso);
+    for (const b of this.db.prepare('SELECT logo_path FROM brand WHERE expires_at IS NOT NULL AND expires_at < ? AND is_demo=0').all(beforeIso) as Array<{ logo_path: string | null }>) {
+      if (b.logo_path) paths.push(b.logo_path);
+    }
+    this.db.prepare('DELETE FROM brand WHERE expires_at IS NOT NULL AND expires_at < ? AND is_demo=0').run(beforeIso);
+    for (const s of this.db.prepare('SELECT image_path FROM source WHERE expires_at IS NOT NULL AND expires_at < ?').all(beforeIso) as Array<{ image_path: string }>) {
+      paths.push(s.image_path);
+    }
+    this.db.prepare('DELETE FROM source WHERE expires_at IS NOT NULL AND expires_at < ?').run(beforeIso);
+    return paths;
   }
 }

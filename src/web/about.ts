@@ -1,16 +1,17 @@
-import { h, t, type Lang } from './lib.js';
+import { BRAND_NAME, h, t, type Lang } from './lib.js';
 
 const REPO = 'https://github.com/Mashrokit-AI/offer-guard';
 const BUILD_LOG = 'https://github.com/Mashrokit-AI/offer-guard/blob/main/docs/build/BUILD_LOG.md';
 
 export function aboutView(lang: Lang): HTMLElement {
   const root = h('div', {});
-  root.append(h('h1', {}, t(lang, 'about_title')));
+  root.append(h('h1', {}, `${t(lang, 'about_title')} ${BRAND_NAME}`));
+  root.append(h('p', { class: 'sub' }, t(lang, 'about_story', { brand: BRAND_NAME })));
   const steps: Array<['about_step1' | 'about_step2' | 'about_step3' | 'about_step4' | 'about_step5', string | null]> = [
     ['about_step1', 'muse-spark-1.3'],
-    ['about_step2', 'muse-spark-1.3'],
-    ['about_step3', null],
-    ['about_step4', 'sam-3.1'],
+    ['about_step2', 'sam-3.1'],
+    ['about_step3', 'muse-image-1.0'],
+    ['about_step4', null],
     ['about_step5', 'muse-spark-1.3'],
   ];
   const ol = h('ol', { class: 'about-list' });
@@ -20,10 +21,10 @@ export function aboutView(lang: Lang): HTMLElement {
     ol.append(li);
   }
   root.append(
-    h('section', { class: 'card' }, h('h2', { style: 'margin-top:0' }, t(lang, 'about_how')), ol),
+    h('section', { class: 'card' }, h('h2', { style: 'margin-top:0' }, `${t(lang, 'about_how')} — ${BRAND_NAME}`), ol),
   );
   const limits = h('ul', { class: 'about-list' });
-  for (const key of ['about_limit1', 'about_limit2', 'about_limit3'] as const) {
+  for (const key of ['about_limit1', 'about_limit2', 'about_limit3', 'about_limit4'] as const) {
     limits.append(h('li', {}, t(lang, key)));
   }
   root.append(
