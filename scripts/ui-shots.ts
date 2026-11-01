@@ -12,7 +12,7 @@
  * single-size demo-source job through the API (live model calls) and fails
  * when the job fails.
  */
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
 import { chromium, type Browser, type Page } from 'playwright';
@@ -71,7 +71,10 @@ async function settle(page: Page): Promise<void> {
 
 async function main(): Promise<void> {
   mkdirSync(SHOTS_DIR, { recursive: true });
-  const dbPath = join(REPO_ROOT, 'data', 'adfit.db');
+  // Fresh throwaway store every run: the seed is idempotent, so reusing the
+  // dev DB would screenshot a stale demo after fixture re-exports.
+  const dbPath = join(SHOTS_DIR, '.shots.db');
+  rmSync(dbPath, { force: true });
   ensureSeeded(REPO_ROOT, dbPath);
   const app = createApp({ repoRoot: REPO_ROOT, dbPath });
   const server = serve({ fetch: app.fetch, port: PORT, hostname: '127.0.0.1' });

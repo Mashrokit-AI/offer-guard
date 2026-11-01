@@ -55,6 +55,16 @@ const en = {
   legend_product: 'product',
   legend_logo: 'logo',
   legend_panel: 'panel',
+  legend_headline: 'headline',
+  legend_subtext: 'subtext',
+  'preset_ig-feed-11': 'Instagram feed 1:1',
+  'preset_ig-feed-45': 'Instagram feed 4:5',
+  'preset_ig-story-916': 'Stories / Reels 9:16',
+  'preset_fb-feed': 'Facebook feed',
+  'preset_fb-link': 'Facebook link',
+  'preset_li-post': 'LinkedIn post',
+  'preset_yt-thumb': 'YouTube thumbnail',
+  'preset_tiktok-916': 'TikTok 9:16',
   proof_title: 'Pixel proof',
   proof_row: '{what}: {diff} px differ after {scale}× scale',
   proof_feather_note: 'A soft 1–2 px feather is allowed only outside the mask core.',
@@ -68,7 +78,7 @@ const en = {
   trace_title: 'Tool-call trace',
   trace_show: 'Show trace',
   trace_hide: 'Hide trace',
-  trace_calls_line: '{spark} Spark calls · {sam} SAM calls · {images} images · {other} other steps',
+  trace_calls_line: 'Spark ×{spark} · SAM ×{sam} · images ×{images} · other ×{other}',
   trace_step: 'step',
   trace_tool: 'model / tool',
   trace_io: 'input → output',
@@ -111,6 +121,7 @@ const en = {
   about_limit2: 'Single-image creatives with one clear product and one logo.',
   about_limit3: 'Fast mode redraws pixels; only Protected mode carries a pixel proof.',
   about_limit4: 'Pixel identity is for our exported PNG; platforms may recompress after upload.',
+  about_limit5: 'Fast mode follows the brand template — including template placements that fall inside platform UI zones.',
   about_links: 'Links',
 
   err_not_found: 'Not found.',
@@ -179,6 +190,16 @@ const he: Record<MessageKey, string> = {
   legend_product: 'מוצר',
   legend_logo: 'לוגו',
   legend_panel: 'פאנל',
+  legend_headline: 'כותרת',
+  legend_subtext: 'כותרת משנה',
+  'preset_ig-feed-11': 'פיד אינסטגרם 1:1',
+  'preset_ig-feed-45': 'פיד אינסטגרם 4:5',
+  'preset_ig-story-916': 'סטורי / רילס 9:16',
+  'preset_fb-feed': 'פיד פייסבוק',
+  'preset_fb-link': 'לינק פייסבוק',
+  'preset_li-post': 'פוסט לינקדאין',
+  'preset_yt-thumb': 'טאמנייל יוטיוב',
+  'preset_tiktok-916': 'טיקטוק 9:16',
   proof_title: 'הוכחת פיקסלים',
   proof_row: '{what}: {diff} פיקסלים שונים אחרי קנה מידה {scale}×',
   proof_feather_note: 'ריכוך קצה של 1–2 פיקסלים מותר רק מחוץ לליבת המסכה.',
@@ -192,7 +213,7 @@ const he: Record<MessageKey, string> = {
   trace_title: 'ציר קריאות הכלים',
   trace_show: 'הצגת הציר',
   trace_hide: 'הסתרת הציר',
-  trace_calls_line: '{spark} קריאות Spark · {sam} קריאות SAM · {images} תמונות · {other} צעדים אחרים',
+  trace_calls_line: 'Spark ×{spark} · SAM ×{sam} · תמונות ×{images} · אחר ×{other}',
   trace_step: 'צעד',
   trace_tool: 'מודל / כלי',
   trace_io: 'קלט ← פלט',
@@ -235,6 +256,7 @@ const he: Record<MessageKey, string> = {
   about_limit2: 'קריאייטיבים של תמונה בודדת עם מוצר אחד ברור ולוגו אחד.',
   about_limit3: 'מצב מהיר מצייר פיקסלים מחדש; רק מצב מוגן נושא הוכחת פיקסלים.',
   about_limit4: 'זהות הפיקסלים נכונה לקובץ ה-PNG שלנו; פלטפורמות עשויות לדחוס מחדש אחרי ההעלאה.',
+  about_limit5: 'מצב מהיר עוקב אחר תבנית המותג — כולל מיקומים בתבנית שנופלים באזורי הממשק של הפלטפורמות.',
   about_links: 'קישורים',
 
   err_not_found: 'לא נמצא.',
@@ -264,6 +286,12 @@ export function t(lang: Lang, key: MessageKey, vars?: Record<string, string | nu
     }
   }
   return out;
+}
+
+/** Localized preset display name; falls back to the server label. */
+export function presetName(lang: Lang, id: string, fallback: string): string {
+  const table = STRINGS[lang] as Record<string, string>;
+  return table[`preset_${id}`] ?? fallback;
 }
 
 /** `--lang he` selects Hebrew; anything else (or absent) is English. */

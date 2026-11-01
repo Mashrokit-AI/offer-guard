@@ -1,6 +1,6 @@
 import type OpenAI from 'openai';
 import { buildBoxPromptText, segment } from '../models/sam.js';
-import { maskArea, maskBoundingBox, unionMasks, type PixelBox } from '../../shared/geometry.js';
+import { maskArea, maskBoundingBox, padBox, unionMasks, type PixelBox } from '../../shared/geometry.js';
 import type { RgbaImage } from './composite.js';
 
 export const DILATE_PX = 4;
@@ -164,6 +164,30 @@ export function growLogoMask(rgba: RgbaImage, mask: Uint8Array, box: PixelBox, d
     }
   }
   return out;
+}
+
+export const LOGO_BOX_PAD_PX = 15;
+/** Horizontal completion reach past the padded box (wordmark clipping). */
+export const LOGO_COMPLETE_X_PX = 60;
+/** BFS reach for the completion pass (must exceed the widest letter gap). */
+export const LOGO_GROW_DILATE_PX = 40;
+
+/**
+ * The full logo-mask strategy in one call. Spark's logo box can end tens of
+ * pixels short of the lockup (seen live: box ended mid-wordmark, pasting
+ * "GAL" with a missing "I"), and both SAM's box prompt and the contrast
+ * grow treat the box as a hard bound. So: pad the box, then grow with the
+ * bound widened horizontally past the padded box — wordmark clipping is
+ * horizontal, while widening vertically would risk the tagline below.
+ * Anything farther than LOGO_COMPLETE_X_PX sideways stays excluded.
+ */
+export function completeLogoMask(rgba: RgbaImage, samMask: Uint8Array, sparkBox: PixelBox): Uint8Array {
+  const W = rgba.width;
+  const H = rgba.height;
+  const padded = padBox(sparkBox, LOGO_BOX_PAD_PX, W, H);
+  const x1 = Math.max(0, padded.x - LOGO_COMPLETE_X_PX);
+  const x2 = Math.min(W, padded.x + padded.w + LOGO_COMPLETE_X_PX);
+  return growLogoMask(rgba, samMask, { x: x1, y: padded.y, w: Math.max(1, x2 - x1), h: padded.h }, LOGO_GROW_DILATE_PX);
 }
 
 /** Segment every target; see segmentTarget for the phrase+box union rule. */

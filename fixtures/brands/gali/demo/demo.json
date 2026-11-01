@@ -1,9 +1,9 @@
 {
   "brand": "gali",
   "mode": "protected",
-  "finishedAt": "2026-11-01T12:46:26.957Z",
-  "modelCalls": 50,
-  "imageCalls": 10,
+  "finishedAt": "2026-11-01T14:46:58.151Z",
+  "modelCalls": 48,
+  "imageCalls": 8,
   "outputs": [
     {
       "source": "demo-src-he",
@@ -28,13 +28,13 @@
           "x": 758,
           "y": 58,
           "w": 225,
-          "h": 61
+          "h": 62
         },
         "products": [
           {
-            "x": 438,
+            "x": 439,
             "y": 210,
-            "w": 203,
+            "w": 201,
             "h": 562
           }
         ],
@@ -48,16 +48,16 @@
         },
         "other_texts": [
           {
-            "x": 740,
+            "x": 710,
             "y": 142,
-            "w": 250,
+            "w": 280,
             "h": 36
           }
         ],
         "product_scales": [
           1.0053667262969588
         ],
-        "logo_scale": 1.0180995475113122,
+        "logo_scale": 1.0135135135135136,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: template zone",
@@ -70,15 +70,15 @@
         "product-0": {
           "scale": 1.0053667262969588,
           "core_differ": 0,
-          "core_total": 97361,
-          "feather_total": 3240,
+          "core_total": 97079,
+          "feather_total": 3292,
           "pass": true
         },
         "logo": {
-          "scale": 1.0180995475113122,
+          "scale": 1.0135135135135136,
           "core_differ": 0,
-          "core_total": 4300,
-          "feather_total": 1735,
+          "core_total": 4784,
+          "feather_total": 1714,
           "pass": true
         },
         "panel": {
@@ -114,8 +114,8 @@
             "exact": true
           },
           {
-            "expected": "בקבוק תרמי · 750 מ״ל",
-            "found": "בקבוק תרמי · 750 מ״ל",
+            "expected": "בקבוק תרמי · 750 מ\"ל",
+            "found": "בקבוק תרמי · 750 מ\"ל",
             "exact": true
           },
           {
@@ -132,14 +132,14 @@
       "retries": 0,
       "modelCalls": 6,
       "imageCalls": 1,
-      "latencyMs": 23032,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 14820,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -152,7 +152,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 8115,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -166,7 +166,7 @@
           "tool_or_model": "code:planLayout",
           "input_summary": "ig-feed-11 protected template=tpl-gali-ig-11",
           "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
-          "duration_ms": 14,
+          "duration_ms": 1,
           "evidence_ids": [
             "out:plan"
           ],
@@ -178,8 +178,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1080x1080",
-          "output_summary": "wire bytes=1733987",
-          "duration_ms": 10964,
+          "output_summary": "wire bytes=1423549",
+          "duration_ms": 13081,
           "evidence_ids": [
             "out:plate"
           ],
@@ -190,9 +190,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.005x logo@1.018x panel@0.841x + text(other-0)",
+          "input_summary": "plate + product-0@1.005x logo@1.014x panel@0.841x + text(other-0)",
           "output_summary": "1080x1080 ok",
-          "duration_ms": 1021,
+          "duration_ms": 907,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -206,8 +206,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/97361 logo:0/4300 panel:0/108251 feather outside core only",
-          "duration_ms": 60,
+          "output_summary": "product-0:0/97079 logo:0/4784 panel:0/108251 feather outside core only",
+          "duration_ms": 43,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -222,7 +222,7 @@
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1080x1080 output",
           "output_summary": "PASS",
-          "duration_ms": 10965,
+          "duration_ms": 15334,
           "evidence_ids": [
             "out:qa"
           ],
@@ -260,9 +260,9 @@
         },
         "products": [
           {
-            "x": 376,
+            "x": 377,
             "y": 290,
-            "w": 222,
+            "w": 221,
             "h": 614
           }
         ],
@@ -276,16 +276,16 @@
         },
         "other_texts": [
           {
-            "x": 740,
+            "x": 710,
             "y": 181,
-            "w": 250,
+            "w": 270,
             "h": 38
           }
         ],
         "product_scales": [
           1.0983899821109124
         ],
-        "logo_scale": 1.0769230769230769,
+        "logo_scale": 1.072072072072072,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: template zone",
@@ -298,15 +298,15 @@
         "product-0": {
           "scale": 1.0983899821109124,
           "core_differ": 0,
-          "core_total": 116481,
-          "feather_total": 3551,
+          "core_total": 116461,
+          "feather_total": 3528,
           "pass": true
         },
         "logo": {
-          "scale": 1.0769230769230769,
+          "scale": 1.072072072072072,
           "core_differ": 0,
-          "core_total": 4939,
-          "feather_total": 1859,
+          "core_total": 5579,
+          "feather_total": 1824,
           "pass": true
         },
         "panel": {
@@ -360,14 +360,14 @@
       "retries": 0,
       "modelCalls": 6,
       "imageCalls": 1,
-      "latencyMs": 30281,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 13322,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -380,7 +380,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 9073,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -406,8 +406,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1080x1350",
-          "output_summary": "wire bytes=1027528",
-          "duration_ms": 11445,
+          "output_summary": "wire bytes=1632722",
+          "duration_ms": 10423,
           "evidence_ids": [
             "out:plate"
           ],
@@ -418,9 +418,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.098x logo@1.077x panel@1.008x + text(other-0)",
+          "input_summary": "plate + product-0@1.098x logo@1.072x panel@1.008x + text(other-0)",
           "output_summary": "1080x1350 ok",
-          "duration_ms": 594,
+          "duration_ms": 1201,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -434,8 +434,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/116481 logo:0/4939 panel:0/155097 feather outside core only",
-          "duration_ms": 63,
+          "output_summary": "product-0:0/116461 logo:0/5579 panel:0/155097 feather outside core only",
+          "duration_ms": 52,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -450,7 +450,7 @@
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1080x1350 output",
           "output_summary": "PASS",
-          "duration_ms": 18151,
+          "duration_ms": 16174,
           "evidence_ids": [
             "out:qa"
           ],
@@ -466,7 +466,7 @@
       "sourceLabel": "source-he.png",
       "preset": "ig-story-916",
       "mode": "protected",
-      "status": "needs_review",
+      "status": "pass",
       "image": "ig-story-916.png",
       "plan": {
         "preset": "ig-story-916",
@@ -484,14 +484,14 @@
           "x": 702,
           "y": 291,
           "w": 302,
-          "h": 82
+          "h": 83
         },
         "products": [
           {
             "x": 391,
-            "y": 510,
+            "y": 507,
             "w": 255,
-            "h": 706
+            "h": 713
           }
         ],
         "headline": null,
@@ -504,39 +504,40 @@
         },
         "other_texts": [
           {
-            "x": 740,
-            "y": 269,
-            "w": 250,
+            "x": 710,
+            "y": 396,
+            "w": 280,
             "h": 53
           }
         ],
         "product_scales": [
-          1.2623762376237624
+          1.275
         ],
-        "logo_scale": 1.3683257918552039,
+        "logo_scale": 1.3621621621621622,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: moved to default corner (dark band behind template zone)",
           "products: template zone",
           "panel: template zone",
           "logo: default top corner (rtl)",
-          "1 other text(s): relative position"
+          "1 other text(s): relative position",
+          "1 other text(s) moved out of overlapping elements"
         ]
       },
       "proof": {
         "product-0": {
-          "scale": 1.2623762376237624,
+          "scale": 1.275,
           "core_differ": 0,
-          "core_total": 154650,
-          "feather_total": 4067,
+          "core_total": 157713,
+          "feather_total": 4154,
           "pass": true
         },
         "logo": {
-          "scale": 1.3683257918552039,
-          "core_differ": 35,
-          "core_total": 8753,
-          "feather_total": 2392,
-          "pass": false
+          "scale": 1.3621621621621622,
+          "core_differ": 0,
+          "core_total": 9631,
+          "feather_total": 2348,
+          "pass": true
         },
         "panel": {
           "scale": 0.8470588235294118,
@@ -547,12 +548,8 @@
         }
       },
       "qa": {
-        "pass": false,
-        "reasons": [
-          "logo at top-right is cropped at the right image edge, letter I cut off, not fully visible",
-          "other text 'בקבוק תרמי · 750 מ״ל' is overlapped by the GALI logo and cropped at edge, end not fully legible and not exact",
-          "important content (logo) is inside/touching the outer right edge band, violating safe area"
-        ],
+        "pass": true,
+        "reasons": [],
         "texts_read": [
           {
             "expected": "20% הנחה על דגמים נבחרים",
@@ -575,9 +572,9 @@
             "exact": true
           },
           {
-            "expected": "בקבוק תרמי · 750 מ״ל",
-            "found": "בקבוק תרמי · 750",
-            "exact": false
+            "expected": "בקבוק תרמי · 750 מ\"ל",
+            "found": "בקבוק תרמי · 750 מ\"ל",
+            "exact": true
           },
           {
             "expected": "GALI",
@@ -585,22 +582,22 @@
             "exact": true
           }
         ],
-        "logo_ok": false,
+        "logo_ok": true,
         "product_ok": true,
-        "safe_area_ok": false,
+        "safe_area_ok": true,
         "invented_text": []
       },
-      "retries": 1,
-      "modelCalls": 7,
-      "imageCalls": 2,
-      "latencyMs": 72940,
+      "retries": 0,
+      "modelCalls": 6,
+      "imageCalls": 1,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 14820,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -613,7 +610,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 8115,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -626,8 +623,8 @@
           "step": "adfit_plan",
           "tool_or_model": "code:planLayout",
           "input_summary": "ig-story-916 protected template=tpl-gali-story",
-          "output_summary": "1 other text(s) travel with pasted pixels; logo: moved to default corner (dark band behind template zone); products: template zone; panel: template zone; logo: default top corner (rtl); 1 other text(s): relative position",
-          "duration_ms": 1,
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: moved to default corner (dark band behind template zone); products: template zone; panel: template zone; logo: default top corner (rtl); 1 other text(s): relative position; 1 other text(s) moved out of overlapping elements",
+          "duration_ms": 0,
           "evidence_ids": [
             "out:plan"
           ],
@@ -639,8 +636,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1080x1920",
-          "output_summary": "wire bytes=992021",
-          "duration_ms": 12672,
+          "output_summary": "wire bytes=841507",
+          "duration_ms": 14843,
           "evidence_ids": [
             "out:plate"
           ],
@@ -651,9 +648,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.262x logo@1.368x panel@0.847x + text(other-0)",
+          "input_summary": "plate + product-0@1.275x logo@1.362x panel@0.847x + text(other-0)",
           "output_summary": "1080x1920 frame overlay applied",
-          "duration_ms": 7258,
+          "duration_ms": 389,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -667,8 +664,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/154650 logo:35/8753 panel:0/109728 feather outside core only",
-          "duration_ms": 494,
+          "output_summary": "product-0:0/157713 logo:0/9631 panel:0/109728 feather outside core only",
+          "duration_ms": 67,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -682,70 +679,14 @@
           "step": "adfit_qa",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1080x1920 output",
-          "output_summary": "FAIL: logo at top-right is cropped at the right image edge, letter I cut off, not fully visible | other text 'בקבוק תרמי · 750 מ״ל' is overlapped by the logo and cropped at edge, not fully legible and not exact | important content (logo) is inside/touching the outer right edge band, violating safe area",
-          "duration_ms": 19831,
+          "output_summary": "PASS",
+          "duration_ms": 15798,
           "evidence_ids": [
             "out:qa"
           ],
-          "next_state": "adfit_retry",
+          "next_state": "done",
           "cached": false,
           "seq": 7
-        },
-        {
-          "step": "adfit_generate",
-          "tool_or_model": "model:muse-image-1.0",
-          "input_summary": "protected plate 1080x1920 (retry)",
-          "output_summary": "wire bytes=948408",
-          "duration_ms": 11904,
-          "evidence_ids": [
-            "out:plate"
-          ],
-          "next_state": "adfit_composite",
-          "cached": false,
-          "seq": 8
-        },
-        {
-          "step": "adfit_composite",
-          "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.262x logo@1.368x panel@0.847x + text(other-0)",
-          "output_summary": "1080x1920 frame overlay applied",
-          "duration_ms": 2620,
-          "evidence_ids": [
-            "out:product-0",
-            "out:logo",
-            "out:panel"
-          ],
-          "next_state": "adfit_proof",
-          "cached": false,
-          "seq": 9
-        },
-        {
-          "step": "adfit_proof",
-          "tool_or_model": "code:elementProof",
-          "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/154650 logo:35/8753 panel:0/109728 feather outside core only",
-          "duration_ms": 837,
-          "evidence_ids": [
-            "out:product-0",
-            "out:logo",
-            "out:panel"
-          ],
-          "next_state": "adfit_qa",
-          "cached": false,
-          "seq": 10
-        },
-        {
-          "step": "adfit_qa",
-          "tool_or_model": "model:muse-spark-1.3",
-          "input_summary": "fresh read of 1080x1920 output",
-          "output_summary": "FAIL: logo at top-right is cropped at the right image edge, letter I cut off, not fully visible | other text 'בקבוק תרמי · 750 מ״ל' is overlapped by the GALI logo and cropped at edge, end not fully legible and not exact | important content (logo) is inside/touching the outer right edge band, violating saf",
-          "duration_ms": 17266,
-          "evidence_ids": [
-            "out:qa"
-          ],
-          "next_state": "needs_review",
-          "cached": false,
-          "seq": 11
         }
       ],
       "error": null
@@ -773,13 +714,13 @@
           "x": 842,
           "y": 65,
           "w": 250,
-          "h": 68
+          "h": 69
         },
         "products": [
           {
             "x": 488,
             "y": 233,
-            "w": 225,
+            "w": 224,
             "h": 624
           }
         ],
@@ -793,16 +734,16 @@
         },
         "other_texts": [
           {
-            "x": 822,
+            "x": 789,
             "y": 160,
-            "w": 278,
+            "w": 300,
             "h": 36
           }
         ],
         "product_scales": [
           1.1162790697674418
         ],
-        "logo_scale": 1.1312217194570136,
+        "logo_scale": 1.1261261261261262,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: template zone",
@@ -815,15 +756,15 @@
         "product-0": {
           "scale": 1.1162790697674418,
           "core_differ": 0,
-          "core_total": 120536,
-          "feather_total": 3597,
+          "core_total": 120137,
+          "feather_total": 3581,
           "pass": true
         },
         "logo": {
-          "scale": 1.1312217194570136,
+          "scale": 1.1261261261261262,
           "core_differ": 0,
-          "core_total": 5592,
-          "feather_total": 1957,
+          "core_total": 6252,
+          "feather_total": 1924,
           "pass": true
         },
         "panel": {
@@ -877,14 +818,14 @@
       "retries": 0,
       "modelCalls": 6,
       "imageCalls": 1,
-      "latencyMs": 29815,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 13322,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -897,7 +838,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 9073,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -911,7 +852,7 @@
           "tool_or_model": "code:planLayout",
           "input_summary": "fb-feed protected template=tpl-gali-ig-11",
           "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
-          "duration_ms": 8,
+          "duration_ms": 0,
           "evidence_ids": [
             "out:plan"
           ],
@@ -923,8 +864,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1200x1200",
-          "output_summary": "wire bytes=1721809",
-          "duration_ms": 13819,
+          "output_summary": "wire bytes=1739711",
+          "duration_ms": 14990,
           "evidence_ids": [
             "out:plate"
           ],
@@ -935,9 +876,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.116x logo@1.131x panel@0.929x + text(other-0)",
+          "input_summary": "plate + product-0@1.116x logo@1.126x panel@0.929x + text(other-0)",
           "output_summary": "1200x1200 ok",
-          "duration_ms": 3098,
+          "duration_ms": 567,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -951,8 +892,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/120536 logo:0/5592 panel:0/132088 feather outside core only",
-          "duration_ms": 395,
+          "output_summary": "product-0:0/120137 logo:0/6252 panel:0/132088 feather outside core only",
+          "duration_ms": 58,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -967,7 +908,7 @@
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1200x1200 output",
           "output_summary": "PASS",
-          "duration_ms": 12482,
+          "duration_ms": 11537,
           "evidence_ids": [
             "out:qa"
           ],
@@ -998,17 +939,17 @@
           "h": 578
         },
         "logo": {
-          "x": 378,
+          "x": 379,
           "y": 217,
-          "w": 162,
+          "w": 160,
           "h": 44
         },
         "products": [
           {
             "x": 126,
-            "y": 64,
+            "y": 63,
             "w": 138,
-            "h": 382
+            "h": 384
           }
         ],
         "headline": null,
@@ -1021,16 +962,16 @@
         },
         "other_texts": [
           {
-            "x": 822,
+            "x": 789,
             "y": 75,
-            "w": 278,
+            "w": 300,
             "h": 36
           }
         ],
         "product_scales": [
-          0.6831683168316832
+          0.6865671641791045
         ],
-        "logo_scale": 0.7333333333333333,
+        "logo_scale": 0.7213114754098361,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: template zone",
@@ -1041,17 +982,17 @@
       },
       "proof": {
         "product-0": {
-          "scale": 0.6831683168316832,
+          "scale": 0.6865671641791045,
           "core_differ": 0,
-          "core_total": 44407,
-          "feather_total": 2201,
+          "core_total": 44711,
+          "feather_total": 2211,
           "pass": true
         },
         "logo": {
-          "scale": 0.7333333333333333,
+          "scale": 0.7213114754098361,
           "core_differ": 0,
-          "core_total": 1945,
-          "feather_total": 1231,
+          "core_total": 2149,
+          "feather_total": 1211,
           "pass": true
         },
         "panel": {
@@ -1105,14 +1046,14 @@
       "retries": 0,
       "modelCalls": 6,
       "imageCalls": 1,
-      "latencyMs": 30377,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 13322,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -1125,7 +1066,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 9073,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -1151,8 +1092,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1200x628",
-          "output_summary": "wire bytes=1064172",
-          "duration_ms": 11861,
+          "output_summary": "wire bytes=1038719",
+          "duration_ms": 12744,
           "evidence_ids": [
             "out:plate"
           ],
@@ -1163,9 +1104,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@0.683x logo@0.733x panel@0.559x + text(other-0)",
+          "input_summary": "plate + product-0@0.687x logo@0.721x panel@0.559x + text(other-0)",
           "output_summary": "1200x628 ok",
-          "duration_ms": 4038,
+          "duration_ms": 313,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1179,8 +1120,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/44407 logo:0/1945 panel:0/47785 feather outside core only",
-          "duration_ms": 101,
+          "output_summary": "product-0:0/44711 logo:0/2149 panel:0/47785 feather outside core only",
+          "duration_ms": 22,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1195,7 +1136,7 @@
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1200x628 output",
           "output_summary": "PASS",
-          "duration_ms": 14342,
+          "duration_ms": 16262,
           "evidence_ids": [
             "out:qa"
           ],
@@ -1226,17 +1167,17 @@
           "h": 577
         },
         "logo": {
-          "x": 378,
+          "x": 379,
           "y": 216,
-          "w": 162,
+          "w": 160,
           "h": 44
         },
         "products": [
           {
             "x": 126,
-            "y": 63,
+            "y": 62,
             "w": 138,
-            "h": 382
+            "h": 384
           }
         ],
         "headline": null,
@@ -1249,16 +1190,16 @@
         },
         "other_texts": [
           {
-            "x": 822,
+            "x": 789,
             "y": 75,
-            "w": 278,
+            "w": 300,
             "h": 36
           }
         ],
         "product_scales": [
-          0.6831683168316832
+          0.6865671641791045
         ],
-        "logo_scale": 0.7333333333333333,
+        "logo_scale": 0.7213114754098361,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: template zone",
@@ -1269,17 +1210,17 @@
       },
       "proof": {
         "product-0": {
-          "scale": 0.6831683168316832,
+          "scale": 0.6865671641791045,
           "core_differ": 0,
-          "core_total": 44407,
-          "feather_total": 2201,
+          "core_total": 44711,
+          "feather_total": 2211,
           "pass": true
         },
         "logo": {
-          "scale": 0.7333333333333333,
+          "scale": 0.7213114754098361,
           "core_differ": 0,
-          "core_total": 1945,
-          "feather_total": 1231,
+          "core_total": 2149,
+          "feather_total": 1211,
           "pass": true
         },
         "panel": {
@@ -1333,14 +1274,14 @@
       "retries": 0,
       "modelCalls": 6,
       "imageCalls": 1,
-      "latencyMs": 38482,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 13322,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -1353,7 +1294,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 9073,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -1367,7 +1308,7 @@
           "tool_or_model": "code:planLayout",
           "input_summary": "li-post protected template=tpl-gali-fb-link",
           "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
-          "duration_ms": 1,
+          "duration_ms": 0,
           "evidence_ids": [
             "out:plan"
           ],
@@ -1379,8 +1320,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1200x627",
-          "output_summary": "wire bytes=1363536",
-          "duration_ms": 14622,
+          "output_summary": "wire bytes=1114547",
+          "duration_ms": 9811,
           "evidence_ids": [
             "out:plate"
           ],
@@ -1391,9 +1332,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@0.683x logo@0.733x panel@0.559x + text(other-0)",
+          "input_summary": "plate + product-0@0.687x logo@0.721x panel@0.559x + text(other-0)",
           "output_summary": "1200x627 ok",
-          "duration_ms": 7709,
+          "duration_ms": 787,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1407,8 +1348,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/44407 logo:0/1945 panel:0/47785 feather outside core only",
-          "duration_ms": 189,
+          "output_summary": "product-0:0/44711 logo:0/2149 panel:0/47785 feather outside core only",
+          "duration_ms": 28,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1423,7 +1364,7 @@
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1200x627 output",
           "output_summary": "PASS",
-          "duration_ms": 15954,
+          "duration_ms": 11010,
           "evidence_ids": [
             "out:qa"
           ],
@@ -1454,17 +1395,17 @@
           "h": 662
         },
         "logo": {
-          "x": 398,
+          "x": 399,
           "y": 248,
-          "w": 184,
+          "w": 182,
           "h": 50
         },
         "products": [
           {
             "x": 134,
-            "y": 89,
+            "y": 88,
             "w": 147,
-            "h": 407
+            "h": 409
           }
         ],
         "headline": null,
@@ -1477,16 +1418,16 @@
         },
         "other_texts": [
           {
-            "x": 877,
+            "x": 841,
             "y": 89,
-            "w": 296,
+            "w": 320,
             "h": 36
           }
         ],
         "product_scales": [
-          0.7277227722772277
+          0.7313432835820896
         ],
-        "logo_scale": 0.8333333333333334,
+        "logo_scale": 0.819672131147541,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: template zone",
@@ -1497,17 +1438,17 @@
       },
       "proof": {
         "product-0": {
-          "scale": 0.7277227722772277,
+          "scale": 0.7313432835820896,
           "core_differ": 0,
-          "core_total": 50573,
-          "feather_total": 2349,
+          "core_total": 50918,
+          "feather_total": 2352,
           "pass": true
         },
         "logo": {
-          "scale": 0.8333333333333334,
+          "scale": 0.819672131147541,
           "core_differ": 0,
-          "core_total": 2683,
-          "feather_total": 1417,
+          "core_total": 2966,
+          "feather_total": 1362,
           "pass": true
         },
         "panel": {
@@ -1561,14 +1502,14 @@
       "retries": 0,
       "modelCalls": 6,
       "imageCalls": 1,
-      "latencyMs": 30356,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 13322,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -1581,7 +1522,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 9073,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -1595,7 +1536,7 @@
           "tool_or_model": "code:planLayout",
           "input_summary": "yt-thumb protected template=tpl-gali-fb-link",
           "output_summary": "1 other text(s) travel with pasted pixels; logo: template zone; products: template zone; panel: template zone; 1 other text(s): relative position",
-          "duration_ms": 11,
+          "duration_ms": 0,
           "evidence_ids": [
             "out:plan"
           ],
@@ -1607,8 +1548,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1280x720",
-          "output_summary": "wire bytes=1310688",
-          "duration_ms": 11610,
+          "output_summary": "wire bytes=1138000",
+          "duration_ms": 9457,
           "evidence_ids": [
             "out:plate"
           ],
@@ -1619,9 +1560,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@0.728x logo@0.833x panel@0.641x + text(other-0)",
+          "input_summary": "plate + product-0@0.731x logo@0.820x panel@0.641x + text(other-0)",
           "output_summary": "1280x720 ok",
-          "duration_ms": 6782,
+          "duration_ms": 753,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1635,8 +1576,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/50573 logo:0/2683 panel:0/62893 feather outside core only",
-          "duration_ms": 228,
+          "output_summary": "product-0:0/50918 logo:0/2966 panel:0/62893 feather outside core only",
+          "duration_ms": 26,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1651,7 +1592,7 @@
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1280x720 output",
           "output_summary": "PASS",
-          "duration_ms": 11716,
+          "duration_ms": 15285,
           "evidence_ids": [
             "out:qa"
           ],
@@ -1667,7 +1608,7 @@
       "sourceLabel": "source-he.png",
       "preset": "tiktok-916",
       "mode": "protected",
-      "status": "needs_review",
+      "status": "pass",
       "image": "tiktok-916.png",
       "plan": {
         "preset": "tiktok-916",
@@ -1685,14 +1626,14 @@
           "x": 702,
           "y": 291,
           "w": 302,
-          "h": 82
+          "h": 83
         },
         "products": [
           {
             "x": 391,
-            "y": 510,
+            "y": 509,
             "w": 255,
-            "h": 706
+            "h": 709
           }
         ],
         "headline": null,
@@ -1705,39 +1646,40 @@
         },
         "other_texts": [
           {
-            "x": 740,
-            "y": 269,
-            "w": 250,
+            "x": 710,
+            "y": 396,
+            "w": 270,
             "h": 53
           }
         ],
         "product_scales": [
-          1.2623762376237624
+          1.2686567164179106
         ],
-        "logo_scale": 1.3683257918552039,
+        "logo_scale": 1.3621621621621622,
         "notes": [
           "1 other text(s) travel with pasted pixels",
           "logo: moved to default corner (dark band behind template zone)",
           "products: template zone",
           "panel: template zone",
           "logo: default top corner (rtl)",
-          "1 other text(s): relative position"
+          "1 other text(s): relative position",
+          "1 other text(s) moved out of overlapping elements"
         ]
       },
       "proof": {
         "product-0": {
-          "scale": 1.2623762376237624,
+          "scale": 1.2686567164179106,
           "core_differ": 0,
-          "core_total": 154650,
-          "feather_total": 4067,
+          "core_total": 156051,
+          "feather_total": 4062,
           "pass": true
         },
         "logo": {
-          "scale": 1.3683257918552039,
-          "core_differ": 35,
-          "core_total": 8753,
-          "feather_total": 2392,
-          "pass": false
+          "scale": 1.3621621621621622,
+          "core_differ": 0,
+          "core_total": 9657,
+          "feather_total": 2348,
+          "pass": true
         },
         "panel": {
           "scale": 0.8470588235294118,
@@ -1748,11 +1690,8 @@
         }
       },
       "qa": {
-        "pass": false,
-        "reasons": [
-          "other text 'בקבוק תרמי · 750 מ״ל' is not exact: in OUTPUT it is overlapped/obscured by the GALI logo and the ending מ״ל is not fully legible",
-          "important content (GALI logo and top small text) is inside the outer edge safe-area bands for 1080x1920 (top 14% and right 4%)"
-        ],
+        "pass": true,
+        "reasons": [],
         "texts_read": [
           {
             "expected": "20% הנחה על דגמים נבחרים",
@@ -1776,8 +1715,8 @@
           },
           {
             "expected": "בקבוק תרמי · 750 מ״ל",
-            "found": "בקבוק תרמי · 750",
-            "exact": false
+            "found": "בקבוק תרמי · 750 מ״ל",
+            "exact": true
           },
           {
             "expected": "GALI",
@@ -1787,20 +1726,20 @@
         ],
         "logo_ok": true,
         "product_ok": true,
-        "safe_area_ok": false,
+        "safe_area_ok": true,
         "invented_text": []
       },
-      "retries": 1,
-      "modelCalls": 7,
-      "imageCalls": 2,
-      "latencyMs": 70536,
+      "retries": 0,
+      "modelCalls": 6,
+      "imageCalls": 1,
+      "latencyMs": 0,
       "trace": [
         {
           "step": "adfit_analyze",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "source 1080x1080",
           "output_summary": "lang=he products=1 logo=yes headline=\"20% הנחה על דגמים נבחרים\" panel=opaque bg=flat coords=pixels",
-          "duration_ms": 13282,
+          "duration_ms": 13322,
           "evidence_ids": [
             "src:analysis"
           ],
@@ -1813,7 +1752,7 @@
           "tool_or_model": "model:sam-3.1",
           "input_summary": "product-0[bottle] logo[logo]",
           "output_summary": "ok: product-0,logo",
-          "duration_ms": 9390,
+          "duration_ms": 9073,
           "evidence_ids": [
             "src:product-0",
             "src:logo"
@@ -1826,8 +1765,8 @@
           "step": "adfit_plan",
           "tool_or_model": "code:planLayout",
           "input_summary": "tiktok-916 protected template=tpl-gali-story",
-          "output_summary": "1 other text(s) travel with pasted pixels; logo: moved to default corner (dark band behind template zone); products: template zone; panel: template zone; logo: default top corner (rtl); 1 other text(s): relative position",
-          "duration_ms": 11,
+          "output_summary": "1 other text(s) travel with pasted pixels; logo: moved to default corner (dark band behind template zone); products: template zone; panel: template zone; logo: default top corner (rtl); 1 other text(s): relative position; 1 other text(s) moved out of overlapping elements",
+          "duration_ms": 1,
           "evidence_ids": [
             "out:plan"
           ],
@@ -1839,8 +1778,8 @@
           "step": "adfit_generate",
           "tool_or_model": "model:muse-image-1.0",
           "input_summary": "protected plate 1080x1920",
-          "output_summary": "wire bytes=1266973",
-          "duration_ms": 14261,
+          "output_summary": "wire bytes=838146",
+          "duration_ms": 12306,
           "evidence_ids": [
             "out:plate"
           ],
@@ -1851,9 +1790,9 @@
         {
           "step": "adfit_composite",
           "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.262x logo@1.368x panel@0.847x + text(other-0)",
+          "input_summary": "plate + product-0@1.269x logo@1.362x panel@0.847x + text(other-0)",
           "output_summary": "1080x1920 frame overlay applied",
-          "duration_ms": 6690,
+          "duration_ms": 932,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1867,8 +1806,8 @@
           "step": "adfit_proof",
           "tool_or_model": "code:elementProof",
           "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/154650 logo:35/8753 panel:0/109728 feather outside core only",
-          "duration_ms": 517,
+          "output_summary": "product-0:0/156051 logo:0/9657 panel:0/109728 feather outside core only",
+          "duration_ms": 62,
           "evidence_ids": [
             "out:product-0",
             "out:logo",
@@ -1882,70 +1821,14 @@
           "step": "adfit_qa",
           "tool_or_model": "model:muse-spark-1.3",
           "input_summary": "fresh read of 1080x1920 output",
-          "output_summary": "FAIL: other text 'בקבוק תרמי · 750 מ״ל' is not exact: in OUTPUT it is overlapped/obscured by the GALI logo and the ending מ״ל is not fully legible | important content (GALI logo and top small text) is inside the outer edge safe-area bands for 1080x1920 (top 14% and right 4%)",
-          "duration_ms": 17442,
+          "output_summary": "PASS",
+          "duration_ms": 14822,
           "evidence_ids": [
             "out:qa"
           ],
-          "next_state": "adfit_retry",
+          "next_state": "done",
           "cached": false,
           "seq": 7
-        },
-        {
-          "step": "adfit_generate",
-          "tool_or_model": "model:muse-image-1.0",
-          "input_summary": "protected plate 1080x1920 (retry)",
-          "output_summary": "wire bytes=764408",
-          "duration_ms": 14933,
-          "evidence_ids": [
-            "out:plate"
-          ],
-          "next_state": "adfit_composite",
-          "cached": false,
-          "seq": 8
-        },
-        {
-          "step": "adfit_composite",
-          "tool_or_model": "code:composite+chromium",
-          "input_summary": "plate + product-0@1.262x logo@1.368x panel@0.847x + text(other-0)",
-          "output_summary": "1080x1920 frame overlay applied",
-          "duration_ms": 1256,
-          "evidence_ids": [
-            "out:product-0",
-            "out:logo",
-            "out:panel"
-          ],
-          "next_state": "adfit_proof",
-          "cached": false,
-          "seq": 9
-        },
-        {
-          "step": "adfit_proof",
-          "tool_or_model": "code:elementProof",
-          "input_summary": "3 pasted elements",
-          "output_summary": "product-0:0/154650 logo:35/8753 panel:0/109728 feather outside core only",
-          "duration_ms": 90,
-          "evidence_ids": [
-            "out:product-0",
-            "out:logo",
-            "out:panel"
-          ],
-          "next_state": "adfit_qa",
-          "cached": false,
-          "seq": 10
-        },
-        {
-          "step": "adfit_qa",
-          "tool_or_model": "model:muse-spark-1.3",
-          "input_summary": "fresh read of 1080x1920 output",
-          "output_summary": "FAIL: other text 'בקבוק תרמי · 750 מ״ל' is not exact: in OUTPUT it is overlapped/obscured by the GALI logo and the ending מ״ל is not fully legible | important content (GALI logo and top small text) is inside the outer edge safe-area bands for 1080x1920 (top 14% and right 4%)",
-          "duration_ms": 15249,
-          "evidence_ids": [
-            "out:qa"
-          ],
-          "next_state": "needs_review",
-          "cached": false,
-          "seq": 11
         }
       ],
       "error": null

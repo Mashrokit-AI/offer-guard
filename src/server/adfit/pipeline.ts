@@ -4,7 +4,7 @@ import type { LayoutPlan, QAverdict, SourceAnalysis, TemplateSpec } from '../../
 import { analyzeSource } from '../models/analyze.js';
 import { editImages, type ImageGenConfig } from '../models/muse-image.js';
 import { qaOutput } from '../models/qa.js';
-import { growLogoMask, segmentTargets } from '../repair/masks.js';
+import { completeLogoMask, segmentTargets } from '../repair/masks.js';
 import {
   decodeRgba,
   exactSize,
@@ -14,7 +14,7 @@ import {
 } from '../repair/composite.js';
 import { artifactDigest, elementProof, type ArtifactDigest, type ElementProof } from '../repair/proof.js';
 import { renderTextBlock, rgbFromHex, type TextLine } from '../repair/render.js';
-import { maskBoundingBox, type PixelBox } from '../../shared/geometry.js';
+import { maskBoundingBox, padBox, type PixelBox } from '../../shared/geometry.js';
 import { freeOtherTexts, planLayout } from './planner.js';
 import { snapPanelRect } from './snap.js';
 import { TraceCollector } from '../workflow/trace.js';
@@ -152,9 +152,14 @@ export async function prepareSource(
   });
 
   const rgba = await decodeRgba(input.bytes);
+  // Pad Spark's logo box: it can end mid-letter, and both the SAM box prompt
+  // and the contrast grow below treat it as a hard bound (seen live as a
+  // "GAL" logo with a damaged "I"). Products keep their union with the
+  // unbounded phrase mask, so only the logo needs this.
+  const logoBox = analysis.logo_bbox ? padBox({ ...analysis.logo_bbox }, 15, input.width, input.height) : null;
   const targets = [
     ...analysis.products.map((p, i) => ({ id: `product-${i}`, phrase: p.sam_phrase, box: { ...p.bbox } })),
-    ...(analysis.logo_bbox ? [{ id: 'logo', phrase: 'logo', box: { ...analysis.logo_bbox } }] : []),
+    ...(logoBox ? [{ id: 'logo', phrase: 'logo', box: { ...logoBox } }] : []),
   ];
   const maskLabels: Record<string, string> = {};
   const masks = new Map<string, Uint8Array>();
@@ -173,11 +178,12 @@ export async function prepareSource(
       maskLabels[id] = seg.labels[id] ?? '';
     }
     // Complete the logo lockup by contrast (SAM sometimes keeps only the mark
-    // + half the wordmark). Counted in the trace, never silent.
+    // + half the wordmark, and Spark's box can end mid-word). Counted in the
+    // trace, never silent.
     let logoGrownBy = 0;
     const logoMask = masks.get('logo');
     if (logoMask && analysis.logo_bbox) {
-      const grown = growLogoMask(rgba, logoMask, { ...analysis.logo_bbox });
+      const grown = completeLogoMask(rgba, logoMask, { ...analysis.logo_bbox });
       for (let i = 0; i < grown.length; i++) {
         if (grown[i] && !logoMask[i]) logoGrownBy++;
       }
@@ -207,7 +213,7 @@ export async function prepareSource(
     const cut = cutOrRect(`product-${i}`, { ...p.bbox });
     if (cut) products.push(cut);
   });
-  const logo = analysis.logo_bbox ? cutOrRect('logo', { ...analysis.logo_bbox }) : null;
+  const logo = logoBox ? cutOrRect('logo', { ...logoBox }) : null;
   // The opaque panel travels as pixels; snap Spark's box out to the panel's
   // visual edges first so padding (and descenders) are never clipped.
   const panel = analysis.panel?.opaque
@@ -250,11 +256,12 @@ function verbatimList(a: SourceAnalysis): string[] {
 
 export function buildFastPrompt(req: OutputRequest, plan: LayoutPlan, qaNotes: string[]): string {
   const a = req.source.analysis;
+  const s = plan.safe;
   const lines = [
     `Recompose this ad creative for ${plan.width}x${plan.height} (${req.preset.label}).`,
     `Keep the brand style${req.brandName ? ` of ${req.brandName}` : ''}, the product, the logo, and every printed text EXACTLY (letter by letter, same script and language: ${a.language}).`,
     ...verbatimList(a).map((t) => `Must appear verbatim: ${JSON.stringify(t)}`),
-    'Keep all important content inside the safe area (away from the outer edges); do not crop the logo or product; do not invent any new text.',
+    `Safe-area pixel lines: left x=${s.x}, right x=${s.x + s.w}, top y=${s.y}, bottom y=${s.y + s.h}. Keep every text, the logo and the product fully inside this rectangle — nothing important may touch or cross these lines, even if a reference image shows content near an edge. Do not crop the logo or product; do not invent any new text.`,
   ];
   if (req.template) lines.push('Follow the layout of the second reference image (the brand template for this size): same zone arrangement, same panel position, same background style.');
   else lines.push(`Layout: ${plan.notes.join('; ')}.`);
@@ -522,6 +529,7 @@ export async function runOutput(
       sourceBytes: req.source.bytes,
       sourceMime: req.source.mimeType,
       extraNotes: qaNotes,
+      safe: plan.safe,
     });
     modelCalls += qa.attempts.length;
     trace.emit({

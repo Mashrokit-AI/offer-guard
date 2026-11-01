@@ -9,6 +9,10 @@
  *   gali-fast  all 8 sizes for GALI-he in Fast mode
  *   gali-prot  all 8 sizes for GALI-he in Protected mode (+ demo export)
  *   noa-prot   all 8 sizes for NOA in Protected mode
+ *   demo       re-export the saved demo from the sidecars on disk (no models)
+ *
+ * --only id1,id2 restricts the size runs to those preset ids (demo export
+ * is skipped; run the demo step afterwards to re-export from disk).
  *
  * Outputs → artifacts/adfit-live/<run>/*.png + report.json (gitignored).
  * The gali-prot run is also exported to fixtures/brands/gali/demo/ as the
@@ -37,6 +41,13 @@ const argv = process.argv.slice(2);
 const stepsArg = argv.indexOf('--steps');
 const STEPS = new Set(
   (stepsArg >= 0 ? (argv[stepsArg + 1] ?? '') : 'specs,noa,smoke,gali-fast,gali-prot,noa-prot')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+const onlyArg = argv.indexOf('--only');
+const ONLY = new Set(
+  (onlyArg >= 0 ? (argv[onlyArg + 1] ?? '') : '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
@@ -149,7 +160,9 @@ async function runAllSizes(
   console.log(
     `${runName}: lang=${source.analysis.language} products=${source.analysis.products.map((p) => p.label).join(',')} logo=${source.logo ? 'yes' : 'no'} panel=${source.analysis.panel ? 'yes' : 'no'} (${source.modelCalls} model calls)`,
   );
-  const reports = await runPool(PRESETS, 2, async (preset): Promise<SizeReport> => {
+  const selected = ONLY.size > 0 ? PRESETS.filter((p) => ONLY.has(p.id)) : PRESETS;
+  if (ONLY.size > 0) console.log(`${runName}: restricted to ${selected.map((p) => p.id).join(',')}`);
+  const reports = await runPool(selected, 2, async (preset): Promise<SizeReport> => {
     const trace = new TraceCollector();
     for (const e of prepTrace.all()) {
       const { seq: _s, ...rest } = e;
@@ -167,7 +180,7 @@ async function runAllSizes(
       await writeFile(join(dir, `${preset.id}.png`), outcome.png);
       await writeFile(
         join(dir, `${preset.id}.json`),
-        JSON.stringify({ plan: outcome.plan, proofs: outcome.proofs, digest: outcome.digest, qa: outcome.qa, retries: outcome.retries, trace: trace.all() }, null, 2),
+        JSON.stringify({ plan: outcome.plan, proofs: outcome.proofs, digest: outcome.digest, qa: outcome.qa, retries: outcome.retries, modelCalls: outcome.modelCalls + source.modelCalls, imageCalls: outcome.imageCalls, trace: trace.all() }, null, 2),
       );
       const proof = outcome.proofs
         ? Object.entries(outcome.proofs).map(([id, pr]) => `${id}:${pr.core_differ}/${pr.core_total}`).join(' ')
@@ -319,11 +332,31 @@ async function main(): Promise<void> {
     const { templates, frames } = await galiTemplates();
     galiProt = await runAllSizes('gali-he-protected', join(GALI, 'source-he.png'), 'GALI', 'protected', templates, frames);
     allReports.push(...galiProt);
-    await exportDemo(galiProt);
+    if (ONLY.size === 0) await exportDemo(galiProt);
+    else console.log('demo: skipped (filtered run — use the demo step to re-export)');
   }
   if (STEPS.has('noa-prot')) {
     const { templates, frames } = await noaTemplates();
     allReports.push(...(await runAllSizes('noa-protected', join(NOA, 'source.png'), 'NOA', 'protected', templates, frames)));
+  }
+  if (STEPS.has('demo')) {
+    const runDir = join(OUT, 'gali-he-protected');
+    const fromDisk: SizeReport[] = [];
+    for (const p of PRESETS) {
+      const sidecarPath = join(runDir, `${p.id}.json`);
+      if (!existsSync(sidecarPath) || !existsSync(join(runDir, `${p.id}.png`))) {
+        console.log(`demo: missing ${p.id} sidecar, skipping`);
+        continue;
+      }
+      const sidecar = JSON.parse(await readFile(sidecarPath, 'utf8')) as {
+        qa: { pass: boolean }; retries: number; modelCalls?: number; imageCalls?: number;
+      };
+      fromDisk.push({
+        preset: p.id, mode: 'protected', ms: 0, qa: sidecar.qa.pass ? 'PASS' : 'FAIL',
+        retries: sidecar.retries ?? 0, proof: '', modelCalls: sidecar.modelCalls ?? 0, imageCalls: sidecar.imageCalls ?? 0,
+      });
+    }
+    await exportDemo(fromDisk);
   }
   const images = allReports.reduce((s, r) => s + r.imageCalls, 0);
   const modelCalls = allReports.reduce((s, r) => s + r.modelCalls, 0);

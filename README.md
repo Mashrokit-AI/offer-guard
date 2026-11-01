@@ -24,9 +24,10 @@ brands are synthetic and fictional; nothing is ever published.
    verbatim headline/sub-text, offer/CTA panel, background style,
    language/direction.
 2. **SAM** (`sam-3.1`) cuts exact product and logo masks (phrase + box-prompt
-   union); code plans the layout from the brand template for that size, or
+   union); contrast completion finishes the logo lockup when Spark's box ends
+   mid-word. Code plans the layout from the brand template for that size, or
    from default rules (logo top corner by direction, product centered in the
-   safe area, panel bottom).
+   safe area, panel bottom), nudging free texts out of other elements.
 3. **Muse Image** (`muse-image-1.0`) paints the background plate (Protected)
    or recomposes the whole creative (Fast). The wire size is aspect-only, so
    code cover-fits every output to the exact preset and verifies.
@@ -35,7 +36,8 @@ brands are synthetic and fictional; nothing is ever published.
    panels as pixel blocks, and applies the brand frame overlay last.
 5. A fresh **Spark** call QA-checks every output against the source analysis:
    every verbatim text exact, logo/product present and uncropped, safe area
-   respected, no invented text.
+   respected (judged against the exact safe-area pixel lines, never eyeballed
+   percents), no invented text.
 
 ## Meta models used where
 
@@ -101,5 +103,10 @@ switch) · `ADFIT_TRUST_PROXY` (0) · `ADFIT_DAILY_MODEL_CALLS` (300) ·
 - Fast mode redraws pixels; only Protected mode carries a pixel proof (a
   soft 1–2 px feather is allowed only outside the mask core).
 - The QA check reads pixels, not intent; "needs review" means a human looks.
+- Fast mode follows the brand template — including placements that fall
+  inside platform UI zones; QA catches most safe-area violations, but the
+  vision judgment is not pixel-exact: it has flagged exactly-placed elements
+  and, once, passed a Fast output whose template-taught logo sits in the
+  UI zone.
 - Pixel identity is for our exported PNG; platforms may recompress after upload.
 - `docs/build/` is the honest build history, including the Offer Guard era.

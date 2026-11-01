@@ -32,6 +32,19 @@ export function boxIoU(a: PixelBox, b: PixelBox): number {
   return inter / union;
 }
 
+/**
+ * Expand a box by `px` on every side, clamped to the W×H frame. Model boxes
+ * run tight — a wordmark box can end mid-letter — and downstream mask/grow
+ * steps treat the box as a hard bound, so pad before using one.
+ */
+export function padBox(b: PixelBox, px: number, W: number, H: number): PixelBox {
+  const x = Math.max(0, b.x - px);
+  const y = Math.max(0, b.y - px);
+  const x2 = Math.min(W, b.x + b.w + px);
+  const y2 = Math.min(H, b.y + b.h + px);
+  return { x, y, w: Math.max(1, x2 - x), h: Math.max(1, y2 - y) };
+}
+
 /** Coordinate systems a model might return boxes in. */
 export type CoordSystem = 'pixels' | '1000' | 'unit';
 

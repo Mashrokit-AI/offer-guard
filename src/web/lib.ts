@@ -1,8 +1,8 @@
 import { BRAND_NAME, BRAND_SLUG } from '../shared/brand.js';
-import { STRINGS, t, type Lang, type MessageKey } from '../shared/i18n.js';
+import { STRINGS, presetName, t, type Lang, type MessageKey } from '../shared/i18n.js';
 
 export type { Lang };
-export { BRAND_NAME, BRAND_SLUG, STRINGS, t };
+export { BRAND_NAME, BRAND_SLUG, STRINGS, presetName, t };
 
 /** Tiny DOM helper. String children become text nodes — never HTML. */
 export function h(
@@ -50,6 +50,15 @@ export function applyLang(lang: Lang): void {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
   document.title = `${BRAND_NAME} — ${t(lang, 'app_tagline')}`;
+}
+
+/**
+ * "WxH" wrapped in bidi isolates: in RTL text the × (a neutral) would
+ * otherwise split the run and render asymmetric sizes swapped ("628×1200").
+ * Harmless in LTR; safe inside <option> and alt text too.
+ */
+export function dims(w: number, h: number): string {
+  return `\u2066${w}\u00d7${h}\u2069`;
 }
 
 export class ApiError extends Error {

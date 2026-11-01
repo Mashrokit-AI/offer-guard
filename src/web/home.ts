@@ -1,4 +1,4 @@
-import { api, errText, fmtTime, h, modeBadge, qaBadge, t, type Lang } from './lib.js';
+import { api, dims, errText, fmtTime, h, modeBadge, presetName, qaBadge, t, type Lang } from './lib.js';
 import type { BrandDto, JobDto, OutputCardDto, PresetDto } from './dto.js';
 
 interface JobRowEvent {
@@ -11,20 +11,20 @@ interface JobRowEvent {
   error?: string;
 }
 
-function presetLabel(presets: PresetDto[], id: string): string {
+function presetLabel(lang: Lang, presets: PresetDto[], id: string): string {
   const p = presets.find((x) => x.id === id);
-  return p ? `${p.label} · ${p.width}×${p.height}` : id;
+  return p ? `${presetName(lang, p.id, p.label)} · ${dims(p.width, p.height)}` : id;
 }
 
 function outputCard(lang: Lang, presets: PresetDto[], o: OutputCardDto): HTMLElement {
   const card = h('a', { class: 'ad-card', href: `#/output/${o.id}` });
-  const img = h('img', { class: 'thumb', src: o.image, alt: presetLabel(presets, o.preset), loading: 'lazy' }) as HTMLImageElement;
+  const img = h('img', { class: 'thumb', src: o.image, alt: presetLabel(lang, presets, o.preset), loading: 'lazy' }) as HTMLImageElement;
   const badges = h('div', { class: 'card-badges' }, qaBadge(lang, o.qaPass), modeBadge(lang, o.mode));
   if (o.retries > 0) badges.append(h('span', { class: 'chip' }, t(lang, 'qa_retry')));
   const proof = o.proofDiff !== null ? h('div', { class: 'ad-card-meta' }, h('span', {}, t(lang, 'card_proof', { count: o.proofDiff, what: '✓' }))) : null;
   card.append(
     img,
-    h('div', { class: 'ad-card-body' }, h('div', { class: 'ad-card-reason' }, presetLabel(presets, o.preset)), badges, proof),
+    h('div', { class: 'ad-card-body' }, h('div', { class: 'ad-card-reason' }, presetLabel(lang, presets, o.preset)), badges, proof),
   );
   return card;
 }
@@ -46,7 +46,7 @@ export function homeView(lang: Lang): HTMLElement {
   // --- upload ---
   const fileInput = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: 'true', hidden: 'true' }) as HTMLInputElement;
   const thumbs = h('div', { class: 'thumbs' });
-  const drop = h('div', { class: 'drop', tabindex: '0', role: 'button' }, h('div', { class: 'drop-title' }, t(lang, 'drop_title')), h('div', { class: 'muted' }, t(lang, 'drop_hint')), thumbs);
+  const drop = h('div', { class: 'drop', tabindex: '0', role: 'button', 'aria-label': t(lang, 'drop_title') }, h('div', { class: 'drop-title' }, t(lang, 'drop_title')), h('div', { class: 'muted' }, t(lang, 'drop_hint')), thumbs);
   const refreshThumbs = (): void => {
     thumbs.replaceChildren();
     for (const f of state.files) {
@@ -119,7 +119,7 @@ export function homeView(lang: Lang): HTMLElement {
     chips.replaceChildren();
     for (const p of state.presets) {
       const on = state.sizes.has(p.id);
-      const b = h('button', { type: 'button', class: `chipbtn${on ? ' on' : ''}`, 'aria-pressed': on ? 'true' : 'false' }, `${p.label} · ${p.width}×${p.height}`) as HTMLButtonElement;
+      const b = h('button', { type: 'button', class: `chipbtn${on ? ' on' : ''}`, 'aria-pressed': on ? 'true' : 'false' }, `${presetName(lang, p.id, p.label)} · ${dims(p.width, p.height)}`) as HTMLButtonElement;
       b.addEventListener('click', () => {
         if (state.sizes.has(p.id)) state.sizes.delete(p.id);
         else if (state.sizes.size < 8) state.sizes.add(p.id);
@@ -231,7 +231,7 @@ export function homeView(lang: Lang): HTMLElement {
   const demoGrid = h('div', { class: 'grid' });
 
   const form = h('div', { class: 'card' },
-    h('div', { class: 'field' }, h('label', {}, t(lang, 'drop_title')), drop, fileInput),
+    h('div', { class: 'field' }, drop, fileInput),
     h('div', { class: 'formrow' },
       h('div', { class: 'field' }, h('label', { for: 'brand' }, t(lang, 'brand_label')), brandSel, matchNote),
       h('div', { class: 'field' }, h('label', {}, t(lang, 'mode_label')), h('div', { class: 'seg' }, modeProt, modeFast)),

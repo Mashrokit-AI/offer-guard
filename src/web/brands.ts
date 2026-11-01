@@ -1,4 +1,4 @@
-import { api, errText, h, t, type Lang } from './lib.js';
+import { api, dims, errText, h, presetName, t, type Lang } from './lib.js';
 import type { BrandDto, NormBoxDto, PresetDto, TemplateDto, TemplateSpecDto } from './dto.js';
 
 interface Zone {
@@ -9,13 +9,13 @@ interface Zone {
   set: (b: NormBoxDto) => void;
 }
 
-function zonesOf(spec: TemplateSpecDto): Zone[] {
+function zonesOf(lang: Lang, spec: TemplateSpecDto): Zone[] {
   const z: Zone[] = [];
-  if (spec.logo) z.push({ key: 'logo', label: 'logo', cls: 'logo', get: () => spec.logo?.box ?? null, set: (b) => { if (spec.logo) spec.logo.box = b; } });
-  if (spec.product_zone) z.push({ key: 'product', label: 'product', cls: 'product', get: () => spec.product_zone, set: (b) => { spec.product_zone = b; } });
-  if (spec.headline_zone) z.push({ key: 'headline', label: 'headline', cls: 'headline', get: () => spec.headline_zone, set: (b) => { spec.headline_zone = b; } });
-  if (spec.subtext_zone) z.push({ key: 'subtext', label: 'subtext', cls: 'subtext', get: () => spec.subtext_zone, set: (b) => { spec.subtext_zone = b; } });
-  if (spec.panel_zone) z.push({ key: 'panel', label: 'panel', cls: 'panel', get: () => spec.panel_zone?.box ?? null, set: (b) => { if (spec.panel_zone) spec.panel_zone.box = b; } });
+  if (spec.logo) z.push({ key: 'logo', label: t(lang, 'legend_logo'), cls: 'logo', get: () => spec.logo?.box ?? null, set: (b) => { if (spec.logo) spec.logo.box = b; } });
+  if (spec.product_zone) z.push({ key: 'product', label: t(lang, 'legend_product'), cls: 'product', get: () => spec.product_zone, set: (b) => { spec.product_zone = b; } });
+  if (spec.headline_zone) z.push({ key: 'headline', label: t(lang, 'legend_headline'), cls: 'headline', get: () => spec.headline_zone, set: (b) => { spec.headline_zone = b; } });
+  if (spec.subtext_zone) z.push({ key: 'subtext', label: t(lang, 'legend_subtext'), cls: 'subtext', get: () => spec.subtext_zone, set: (b) => { spec.subtext_zone = b; } });
+  if (spec.panel_zone) z.push({ key: 'panel', label: t(lang, 'legend_panel'), cls: 'panel', get: () => spec.panel_zone?.box ?? null, set: (b) => { if (spec.panel_zone) spec.panel_zone.box = b; } });
   spec.frames.forEach((f, i) => {
     z.push({ key: `frame${i}`, label: f.kind, cls: 'frame', get: () => spec.frames[i]?.box ?? null, set: (b) => { const fr = spec.frames[i]; if (fr) fr.box = b; } });
   });
@@ -25,13 +25,14 @@ function zonesOf(spec: TemplateSpecDto): Zone[] {
 /** Template card with the parsed layout drawn as labeled, draggable boxes. */
 function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChanged: () => void): HTMLElement {
   const card = h('div', { class: 'tpl-card' });
-  const presetName = tpl.preset ? (presets.find((p) => p.id === tpl.preset)?.label ?? tpl.preset) : t(lang, 'brand_default');
+  const assigned = presets.find((x) => x.id === tpl.preset);
+  const presetTitle = tpl.preset ? (assigned ? presetName(lang, assigned.id, assigned.label) : tpl.preset) : t(lang, 'brand_default');
   const status = tpl.status === 'ready' ? h('span', { class: 'chip fresh' }, t(lang, 'tpl_status_ready'))
     : tpl.status === 'pending' ? h('span', { class: 'chip' }, t(lang, 'tpl_status_pending'))
     : h('span', { class: 'chip' }, `${t(lang, 'tpl_status_failed')}${tpl.error ? ` — ${tpl.error}` : ''}`);
 
   const frame = h('div', { class: 'img-frame' });
-  const img = h('img', { src: tpl.image, alt: presetName }) as HTMLImageElement;
+  const img = h('img', { src: tpl.image, alt: presetTitle }) as HTMLImageElement;
   frame.append(img);
   const layer = h('div', { class: 'overlay' });
   frame.append(layer);
@@ -39,14 +40,17 @@ function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChan
   const paint = (): void => {
     layer.replaceChildren();
     if (!tpl.spec) return;
-    for (const z of zonesOf(tpl.spec)) {
+    zonesOf(lang, tpl.spec).forEach((z, i) => {
       const b = z.get();
-      if (!b) continue;
+      if (!b) return;
       const d = h('div', {
         class: `box drag ${z.cls}`,
         style: `left:${(b.x * 100).toFixed(2)}%;top:${(b.y * 100).toFixed(2)}%;width:${(b.w * 100).toFixed(2)}%;height:${(b.h * 100).toFixed(2)}%`,
       });
-      d.append(h('span', { class: 'tag' }, z.label));
+      // Alternate the chip above/below the box so nested zones (headline in
+      // panel) keep readable labels instead of one merged blob.
+      const tagAttrs = i % 2 === 0 ? { class: 'tag' } : { class: 'tag', style: 'top:auto;bottom:-20px' };
+      d.append(h('span', tagAttrs, z.label));
       // Simple drag: move the box, clamp into the frame.
       d.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
@@ -76,13 +80,13 @@ function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChan
         d.addEventListener('pointerup', up);
       });
       layer.append(d);
-    }
+    });
   };
   paint();
 
   const presetSel = h('select', { class: 'input small' }) as HTMLSelectElement;
   presetSel.append(h('option', { value: '' }, t(lang, 'brand_default')));
-  for (const p of presets) presetSel.append(h('option', { value: p.id }, `${p.label} · ${p.width}×${p.height}`));
+  for (const p of presets) presetSel.append(h('option', { value: p.id }, `${presetName(lang, p.id, p.label)} · ${dims(p.width, p.height)}`));
   presetSel.value = tpl.preset ?? '';
   presetSel.addEventListener('change', async () => {
     try {
@@ -120,7 +124,7 @@ function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChan
   card.append(
     frame,
     h('div', { class: 'tpl-body' },
-      h('div', { class: 'tpl-head' }, h('strong', {}, presetName), status),
+      h('div', { class: 'tpl-head' }, h('strong', {}, presetTitle), status),
       h('div', { class: 'field' }, h('label', {}, t(lang, 'tpl_size')), presetSel),
       tpl.spec ? h('p', { class: 'muted small' }, t(lang, 'tpl_nudge_hint')) : null,
       h('div', { class: 'toolbar' }, saveBtn, rejectBtn),
@@ -212,7 +216,7 @@ export function brandsView(lang: Lang): HTMLElement {
           const tplFrame = h('input', { type: 'file', accept: 'image/png' }) as HTMLInputElement;
           const tplPreset = h('select', { class: 'input small' }) as HTMLSelectElement;
           tplPreset.append(h('option', { value: '' }, t(lang, 'brand_default')));
-          for (const p of data.presets) tplPreset.append(h('option', { value: p.id }, `${p.label} · ${p.width}×${p.height}`));
+          for (const p of data.presets) tplPreset.append(h('option', { value: p.id }, `${presetName(lang, p.id, p.label)} · ${dims(p.width, p.height)}`));
           const tplBtn = h('button', { type: 'button', class: 'btn secondary small' }, t(lang, 'tpl_upload')) as HTMLButtonElement;
           tplBtn.addEventListener('click', async () => {
             const f = tplImg.files?.[0];

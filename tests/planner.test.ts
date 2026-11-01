@@ -141,7 +141,7 @@ describe('layout planner', () => {
     const plan = planLayout({
       preset,
       source: analysis({
-        other_texts: [{ text: 'tagline', bbox: { x: 850, y: 140, w: 140, h: 34 }, bold: false, color: '#1f5f6b' }],
+        other_texts: [{ text: 'tagline', bbox: { x: 90, y: 700, w: 140, h: 34 }, bold: false, color: '#1f5f6b' }],
       }),
       sourceWidth: 1080,
       sourceHeight: 1080,
@@ -150,8 +150,8 @@ describe('layout planner', () => {
       template: null,
     });
     expect(plan.other_texts).toHaveLength(1);
-    // 140x34 grows to the 80x36 minimum, centered.
-    expect(plan.other_texts[0]).toMatchObject({ x: 850, y: 139, w: 140, h: 36 });
+    // 140x34 grows to the 80x36 minimum, centered; clear of other elements.
+    expect(plan.other_texts[0]).toMatchObject({ x: 90, y: 699, w: 140, h: 36 });
     expect(inside(plan.other_texts[0]!, plan.safe)).toBe(true);
   });
 

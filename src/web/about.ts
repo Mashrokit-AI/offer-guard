@@ -24,7 +24,7 @@ export function aboutView(lang: Lang): HTMLElement {
     h('section', { class: 'card' }, h('h2', { style: 'margin-top:0' }, `${t(lang, 'about_how')} — ${BRAND_NAME}`), ol),
   );
   const limits = h('ul', { class: 'about-list' });
-  for (const key of ['about_limit1', 'about_limit2', 'about_limit3', 'about_limit4'] as const) {
+  for (const key of ['about_limit1', 'about_limit2', 'about_limit3', 'about_limit4', 'about_limit5'] as const) {
     limits.append(h('li', {}, t(lang, key)));
   }
   root.append(

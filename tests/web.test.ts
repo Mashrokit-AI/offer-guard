@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEMO_JOB_ID } from '../src/server/adfit/seed.js';
+import { dims } from '../src/web/lib.js';
 import { createApp } from '../src/server/http/app.js';
 import type { HttpConfig } from '../src/server/http/config.js';
 import { Store } from '../src/server/store/db.js';
@@ -427,5 +428,12 @@ describe('live-job guards', () => {
     const bytes = Buffer.from(await zip.arrayBuffer());
     expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK');
     expect((await app.request('/api/runs/nope/zip')).status).toBe(404);
+  });
+});
+
+describe('dims', () => {
+  it('wraps WxH in bidi isolates so RTL never swaps the numbers', () => {
+    expect(dims(1200, 628)).toBe('\u20661200\u00d7628\u2069');
+    expect(dims(1080, 1080)).toContain('1080\u00d71080');
   });
 });

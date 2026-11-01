@@ -67,6 +67,14 @@ describe('image prompts', () => {
     expect(p).toContain('do not invent');
   });
 
+  it('fast prompt states the exact safe-area pixel lines', () => {
+    const p = buildFastPrompt(req, plan, []);
+    expect(p).toContain('x=54');
+    expect(p).toContain('x=1026');
+    expect(p).toContain('y=269');
+    expect(p).toContain('y=1651');
+  });
+
   it('plate prompt bans all foreground content and keeps the style', () => {
     const p = buildPlatePrompt(req, plan, []);
     expect(p).toMatch(/NO product.*NO logo.*NO text/s);
@@ -79,9 +87,17 @@ describe('image prompts', () => {
   });
 
   it('qa prompt compares output against the source image, not just the facts', () => {
-    const p = buildQaPrompt(source.analysis, 1080, 1080, []);
+    const p = buildQaPrompt(source.analysis, 1080, 1080, [], { x: 43, y: 43, w: 994, h: 994 });
     expect(p).toContain('FIRST is the SOURCE');
     expect(p).toContain('NEITHER in the source image NOR');
     expect(p).toContain('20% הנחה');
+  });
+
+  it('qa prompt states the exact safe-area pixel lines (no eyeballed percents)', () => {
+    const p = buildQaPrompt(source.analysis, 1200, 627, [], { x: 48, y: 25, w: 1104, h: 577 });
+    expect(p).toContain('x=48');
+    expect(p).toContain('x=1152');
+    expect(p).toContain('y=25');
+    expect(p).toContain('y=602');
   });
 });

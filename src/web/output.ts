@@ -1,4 +1,4 @@
-import { api, bboxDiv, BRAND_SLUG, errText, h, modeBadge, qaBadge, t, type Lang } from './lib.js';
+import { api, bboxDiv, BRAND_SLUG, dims, errText, h, modeBadge, presetName, qaBadge, t, type Lang } from './lib.js';
 import type { OutputDetailDto, PresetDto } from './dto.js';
 
 /** Load a grayscale mask PNG and paint it tinted onto a canvas overlay. */
@@ -49,7 +49,7 @@ export function outputView(lang: Lang, id: number): HTMLElement {
       return;
     }
     const preset = presets.find((p) => p.id === d.preset);
-    const title = preset ? `${preset.label} · ${preset.width}×${preset.height}` : d.preset;
+    const title = preset ? `${presetName(lang, preset.id, preset.label)} · ${dims(preset.width, preset.height)}` : d.preset;
 
     const head = h('div', { class: 'verdict-banner' },
       h('div', {},
