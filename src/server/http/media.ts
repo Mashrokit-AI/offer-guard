@@ -1,6 +1,6 @@
 import { mkdir, readFile, realpath } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { extname, join, relative, resolve } from 'node:path';
+import { extname, isAbsolute, join, relative, resolve } from 'node:path';
 import sharp from 'sharp';
 import { Store } from '../store/db.js';
 
@@ -43,12 +43,19 @@ async function contained(repoRoot: string, abs: string): Promise<string | null> 
   } catch {
     return null;
   }
-  const root = await repoReal(repoRoot);
-  const rel = relative(root, real);
-  if (!rel || rel.startsWith('..')) return null;
-  const top = rel.split('/')[0];
-  if (top !== 'fixtures' && top !== 'artifacts' && top !== 'data') return null;
-  return real;
+  // Each allowed top dir is resolved too, so a deploy may symlink data/ or
+  // artifacts/ to shared storage outside the release directory.
+  for (const top of ['fixtures', 'artifacts', 'data']) {
+    let base: string;
+    try {
+      base = await repoReal(join(repoRoot, top));
+    } catch {
+      continue;
+    }
+    const rel = relative(base, real);
+    if (rel && !rel.startsWith('..') && !isAbsolute(rel)) return real;
+  }
+  return null;
 }
 
 function contentTypeFor(path: string): string | null {
