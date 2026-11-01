@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { snapPanelRect } from '../src/server/adfit/snap.js';
+import { panelComplexity, samplePanelColor, snapPanelRect } from '../src/server/adfit/snap.js';
 import type { RgbaImage } from '../src/server/repair/composite.js';
 
 /** Orange panel (10,20,60x30) with white text bars on a teal gradient. */
@@ -20,6 +20,31 @@ function panelImage(): RgbaImage {
   }
   return { data, width: w, height: h };
 }
+
+describe('panel sampling', () => {
+  it('samples the fill as the median (text outliers ignored)', () => {
+    expect(samplePanelColor(panelImage(), { x: 10, y: 20, w: 60, h: 30 })).toBe('#ff5a3c');
+  });
+
+  it('scores flat-with-text as simple, photo texture as complex', () => {
+    // Flat orange + white center text: border ring is flat → rebuild.
+    expect(panelComplexity(panelImage(), { x: 10, y: 20, w: 60, h: 30 }).complex).toBe(false);
+    // Noisy border (photo texture at the edges) → paste.
+    const noisy = panelImage();
+    for (let y = 20; y < 50; y++) {
+      for (let x = 10; x < 70; x++) {
+        const border = x < 14 || x >= 66 || y < 24 || y >= 46;
+        if (!border) continue;
+        const o = (y * noisy.width + x) * 4;
+        const v = ((x * 37 + y * 91) % 200) + 30;
+        noisy.data[o] = v;
+        noisy.data[o + 1] = 255 - v;
+        noisy.data[o + 2] = (v * 2) % 255;
+      }
+    }
+    expect(panelComplexity(noisy, { x: 10, y: 20, w: 60, h: 30 }).complex).toBe(true);
+  });
+});
 
 describe('snapPanelRect', () => {
   it('expands a tight text-fitted box out to the panel edges', () => {

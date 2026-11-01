@@ -22,8 +22,8 @@ function zonesOf(lang: Lang, spec: TemplateSpecDto): Zone[] {
   return z;
 }
 
-/** Template card with the parsed layout drawn as labeled, draggable boxes. */
-function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChanged: () => void): HTMLElement {
+/** Template card with the parsed layout drawn as labeled boxes (draggable unless read-only). */
+function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChanged: () => void, readOnly = false): HTMLElement {
   const card = h('div', { class: 'tpl-card' });
   const assigned = presets.find((x) => x.id === tpl.preset);
   const presetTitle = tpl.preset ? (assigned ? presetName(lang, assigned.id, assigned.label) : tpl.preset) : t(lang, 'brand_default');
@@ -44,13 +44,17 @@ function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChan
       const b = z.get();
       if (!b) return;
       const d = h('div', {
-        class: `box drag ${z.cls}`,
+        class: readOnly ? `box ${z.cls}` : `box drag ${z.cls}`,
         style: `left:${(b.x * 100).toFixed(2)}%;top:${(b.y * 100).toFixed(2)}%;width:${(b.w * 100).toFixed(2)}%;height:${(b.h * 100).toFixed(2)}%`,
       });
       // Alternate the chip above/below the box so nested zones (headline in
       // panel) keep readable labels instead of one merged blob.
       const tagAttrs = i % 2 === 0 ? { class: 'tag' } : { class: 'tag', style: 'top:auto;bottom:-20px' };
       d.append(h('span', tagAttrs, z.label));
+      if (readOnly) {
+        layer.append(d);
+        return;
+      }
       // Simple drag: move the box, clamp into the frame.
       d.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
@@ -121,13 +125,15 @@ function templateCard(lang: Lang, presets: PresetDto[], tpl: TemplateDto, onChan
     }
   });
 
+  if (readOnly) presetSel.disabled = true;
   card.append(
     frame,
     h('div', { class: 'tpl-body' },
       h('div', { class: 'tpl-head' }, h('strong', {}, presetTitle), status),
+      readOnly ? h('p', { class: 'muted small' }, t(lang, 'demo_readonly')) : null,
       h('div', { class: 'field' }, h('label', {}, t(lang, 'tpl_size')), presetSel),
-      tpl.spec ? h('p', { class: 'muted small' }, t(lang, 'tpl_nudge_hint')) : null,
-      h('div', { class: 'toolbar' }, saveBtn, rejectBtn),
+      tpl.spec && !readOnly ? h('p', { class: 'muted small' }, t(lang, 'tpl_nudge_hint')) : null,
+      readOnly ? null : h('div', { class: 'toolbar' }, saveBtn, rejectBtn),
     ),
   );
   return card;
@@ -258,7 +264,7 @@ export function brandsView(lang: Lang): HTMLElement {
 
         sec.append(h('h3', {}, t(lang, 'brand_templates')));
         const grid = h('div', { class: 'tpl-grid' });
-        for (const tpl of b.templates) grid.append(templateCard(lang, data.presets, tpl, reload));
+        for (const tpl of b.templates) grid.append(templateCard(lang, data.presets, tpl, reload, b.demo));
         if (b.templates.length === 0) grid.append(h('p', { class: 'muted' }, '—'));
         sec.append(grid);
         list.append(sec);

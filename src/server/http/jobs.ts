@@ -20,11 +20,21 @@ export interface JobRow {
   models: string[];
   /** Summed trace durations in ms (for the live card footer). */
   traceMs: number;
+  /** True while the batch review for this streamed preview is still pending. */
+  pending?: boolean;
   error?: string;
 }
 
 export interface JobProgressEvent {
   type: 'progress';
+  done: number;
+  total: number;
+  row: JobRow;
+}
+
+/** A streamed preview reached its final state (no progress increment). */
+export interface JobUpdateEvent {
+  type: 'update';
   done: number;
   total: number;
   row: JobRow;
@@ -38,7 +48,7 @@ export interface JobTerminalEvent {
   error?: string;
 }
 
-export type JobEvent = JobProgressEvent | JobTerminalEvent;
+export type JobEvent = JobProgressEvent | JobUpdateEvent | JobTerminalEvent;
 
 export interface JobResult {
   jobId?: string;
@@ -126,14 +136,15 @@ export class JobManager {
   }
 
   /**
-   * Submit a heavy task. The task runs `onRow` per finished output and
-   * resolves with the resulting store job id. Returns null when the server
-   * is busy (running + queue full).
+   * Submit a heavy task. The task runs `onRow` per finished output (and
+   * `onUpdate` when a streamed preview reaches its final state) and resolves
+   * with the resulting store job id. Returns null when the server is busy
+   * (running + queue full).
    */
   submit(
     kind: Job['kind'],
     total: number,
-    task: (onRow: (row: JobRow) => void) => Promise<JobResult>,
+    task: (onRow: (row: JobRow) => void, onUpdate: (row: JobRow) => void) => Promise<JobResult>,
   ): Job | null {
     if (this.running && this.waiting.length >= this.opts.queueMax) return null;
     const now = this.opts.now ?? Date.now;
@@ -167,6 +178,13 @@ export class JobManager {
     this.emit(job, { type: 'progress', done: job.done, total: job.total, row });
   }
 
+  /** Patch an already-streamed row to its final state (review landed). */
+  updateRow(job: Job, row: JobRow): void {
+    const i = job.rows.findIndex((r) => r.outputId === row.outputId);
+    if (i >= 0) job.rows[i] = row;
+    this.emit(job, { type: 'update', done: job.done, total: job.total, row });
+  }
+
   private emit(job: Job, event: JobEvent): void {
     job.log.push(event);
     for (const fn of job.listeners) {
@@ -191,13 +209,13 @@ export class JobManager {
     const next = this.waiting.shift();
     if (next) {
       next.status = 'running';
-      void this.execute(next, (next as unknown as { task: (onRow: (r: JobRow) => void) => Promise<JobResult> }).task);
+      void this.execute(next, (next as unknown as { task: (onRow: (r: JobRow) => void, onUpdate: (r: JobRow) => void) => Promise<JobResult> }).task);
     }
   }
 
   private async execute(
     job: Job,
-    task: (onRow: (row: JobRow) => void) => Promise<JobResult>,
+    task: (onRow: (row: JobRow) => void, onUpdate: (row: JobRow) => void) => Promise<JobResult>,
   ): Promise<void> {
     // Stash the task so finish() can start queued jobs generically.
     (job as unknown as { task: typeof task }).task = task;
@@ -215,7 +233,10 @@ export class JobManager {
     // Don't hold the process open for a hung job.
     timer.unref?.();
     try {
-      const result = await task((row) => this.onRow(job, row));
+      const result = await task(
+        (row) => this.onRow(job, row),
+        (row) => this.updateRow(job, row),
+      );
       if (timedOut) return;
       clearTimeout(timer);
       this.finish(job, { type: 'done', done: job.done, total: job.total, jobId: result.jobId });

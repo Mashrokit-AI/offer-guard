@@ -677,6 +677,8 @@ table.trace td.io { overflow-wrap: anywhere; max-width: 340px; }
 img.masklayer, canvas.masklayer { position: absolute; inset: 0; width: 100%; height: 100%; }
 .box.headline { border-color: #34c759; }
 .box.subtext { border-color: #64d2ff; }
+.box.other { border-color: #ac8e68; }
+.box.target { border-color: #ff9f0a; border-style: dashed; }
 .box.frame { border-color: #ff9f0a; border-style: dashed; }
 .box.safe { border-color: #30b0c7; border-style: dashed; }
 .box.drag { cursor: move; touch-action: none; }

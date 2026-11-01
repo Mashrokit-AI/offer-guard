@@ -11,6 +11,7 @@ interface JobRowEvent {
   retries: number;
   models: string[];
   traceMs: number;
+  pending?: boolean;
   error?: string;
 }
 
@@ -41,6 +42,7 @@ function outputCard(lang: Lang, presets: PresetDto[], o: OutputCardDto): HTMLEle
   const badges = h('div', { class: 'card-badges' }, qaBadge(lang, o.qaPass), modeBadge(lang, o.mode));
   // The retry badge means the retry FIXED it; a still-failing output shows only qa_fail.
   if (o.retries > 0 && o.qaPass === true) badges.append(h('span', { class: 'chip fresh' }, t(lang, 'qa_retry')));
+  if ((o as { pending?: boolean }).pending === true) badges.append(h('span', { class: 'chip fresh' }, t(lang, 'check_review_pending')));
   const proof = o.proofDiff !== null ? h('div', { class: 'ad-card-meta' }, h('span', {}, t(lang, 'card_proof', { count: o.proofDiff }))) : null;
   card.append(
     frame,
@@ -230,7 +232,19 @@ export function homeView(lang: Lang): HTMLElement {
             preset: e.row.preset, mode: state.mode, status: e.row.status,
             image: `media/output/${e.row.outputId}`, qaPass: e.row.status === 'pass' ? true : e.row.status === 'needs_review' ? false : null,
             retries: e.row.retries, proofDiff: null, models: e.row.models ?? [], traceMs: e.row.traceMs ?? 0,
-          }];
+            pending: e.row.pending === true,
+          } as OutputCardDto];
+          renderLive();
+        } else if (e.type === 'update' && e.row) {
+          // A streamed preview reached its final state: patch the card in place.
+          liveRows = liveRows.map((o) => (o.id === (e.row as JobRowEvent).outputId
+            ? {
+                ...o, status: (e.row as JobRowEvent).status,
+                qaPass: (e.row as JobRowEvent).status === 'pass' ? true : (e.row as JobRowEvent).status === 'needs_review' ? false : null,
+                retries: (e.row as JobRowEvent).retries, models: (e.row as JobRowEvent).models ?? [], traceMs: (e.row as JobRowEvent).traceMs ?? 0,
+                pending: false,
+              } as OutputCardDto
+            : o));
           renderLive();
         } else if (e.type === 'done' || e.type === 'failed') {
           es.close();

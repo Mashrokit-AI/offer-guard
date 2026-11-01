@@ -11,9 +11,9 @@ import { Store } from '../store/db.js';
  * Thumbnails are generated once and cached under artifacts/web-cache/.
  */
 
-export type MediaKind = 'output' | 'thumb' | 'source' | 'template' | 'logo' | 'frame';
+export type MediaKind = 'output' | 'thumb' | 'before' | 'source' | 'template' | 'logo' | 'frame';
 
-export const MEDIA_KINDS: MediaKind[] = ['output', 'thumb', 'source', 'template', 'logo', 'frame'];
+export const MEDIA_KINDS: MediaKind[] = ['output', 'thumb', 'before', 'source', 'template', 'logo', 'frame'];
 
 export interface MediaDeps {
   repoRoot: string;
@@ -85,13 +85,23 @@ async function ensureThumb(repoRoot: string, key: string, srcFile: string): Prom
 export async function resolveMedia(deps: MediaDeps, kind: MediaKind, idRaw: string): Promise<MediaFile | null> {
   const store = Store.open(deps.dbPath);
   try {
-    if (kind === 'output' || kind === 'thumb') {
+    if (kind === 'output' || kind === 'thumb' || kind === 'before') {
       if (!/^\d+$/.test(idRaw)) return null;
       const output = store.getOutput(Number(idRaw));
       if (!output) return null;
-      const file = await contained(deps.repoRoot, resolve(deps.repoRoot, output.image_path));
+      let rel = output.image_path;
+      if (kind === 'before') {
+        try {
+          const checks = JSON.parse(output.checks_json ?? 'null') as { repaired?: { before?: string } } | null;
+          if (typeof checks?.repaired?.before !== 'string' || checks.repaired.before.length === 0) return null;
+          rel = checks.repaired.before;
+        } catch {
+          return null;
+        }
+      }
+      const file = await contained(deps.repoRoot, resolve(deps.repoRoot, rel));
       if (!file) return null;
-      if (kind === 'output') {
+      if (kind === 'output' || kind === 'before') {
         const ct = contentTypeFor(file);
         return ct ? { file, contentType: ct } : null;
       }

@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS output (
   latency_ms INTEGER NOT NULL,
   trace_json TEXT NOT NULL,
   error TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  checks_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_output_job ON output(job_id);
 CREATE TABLE IF NOT EXISTS usage (
@@ -76,6 +77,17 @@ CREATE TABLE IF NOT EXISTS usage (
   kind TEXT NOT NULL,
   count INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS spend (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL,
+  model TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  cost_usd REAL NOT NULL,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  images INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_spend_created ON spend(created_at);
 `;
 
 export interface BrandRow {
@@ -146,6 +158,7 @@ export interface OutputRow {
   trace_json: string;
   error: string | null;
   created_at: string;
+  checks_json: string | null;
 }
 
 const now = (): string => new Date().toISOString();
@@ -161,6 +174,13 @@ export class Store {
     mkdirSync(dirname(dbPath), { recursive: true });
     const db = new Database(dbPath);
     db.exec(SCHEMA);
+    // Light migration for pre-existing databases (CREATE TABLE IF NOT EXISTS
+    // never adds columns to an old table).
+    try {
+      db.exec('ALTER TABLE output ADD COLUMN checks_json TEXT');
+    } catch {
+      // Column already exists.
+    }
     return new Store(db);
   }
 
@@ -288,11 +308,36 @@ export class Store {
     jobId: string; sourceId: string; preset: string; mode: string; status: string; imagePath: string;
     planJson: string; proofJson: string | null; qaJson: string | null; retries: number;
     modelCalls: number; imageCalls: number; latencyMs: number; traceJson: string; error: string | null;
+    checksJson?: string | null;
   }): number {
     const r = this.db
-      .prepare('INSERT INTO output (job_id, source_id, preset, mode, status, image_path, plan_json, proof_json, qa_json, retries, model_calls, image_calls, latency_ms, trace_json, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(o.jobId, o.sourceId, o.preset, o.mode, o.status, o.imagePath, o.planJson, o.proofJson, o.qaJson, o.retries, o.modelCalls, o.imageCalls, o.latencyMs, o.traceJson, o.error, now());
+      .prepare('INSERT INTO output (job_id, source_id, preset, mode, status, image_path, plan_json, proof_json, qa_json, retries, model_calls, image_calls, latency_ms, trace_json, error, created_at, checks_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(o.jobId, o.sourceId, o.preset, o.mode, o.status, o.imagePath, o.planJson, o.proofJson, o.qaJson, o.retries, o.modelCalls, o.imageCalls, o.latencyMs, o.traceJson, o.error, now(), o.checksJson ?? null);
     return Number(r.lastInsertRowid);
+  }
+
+  /** Update one output after the repair pass / batch review lands. */
+  updateOutput(id: number, o: {
+    status?: string; imagePath?: string; planJson?: string; proofJson?: string | null;
+    qaJson?: string | null; retries?: number; modelCalls?: number; imageCalls?: number;
+    latencyMs?: number; traceJson?: string; error?: string | null; checksJson?: string | null;
+  }): void {
+    const sets: string[] = [];
+    const vals: unknown[] = [];
+    const cols: Record<string, string> = {
+      status: 'status', imagePath: 'image_path', planJson: 'plan_json', proofJson: 'proof_json',
+      qaJson: 'qa_json', retries: 'retries', modelCalls: 'model_calls', imageCalls: 'image_calls',
+      latencyMs: 'latency_ms', traceJson: 'trace_json', error: 'error', checksJson: 'checks_json',
+    };
+    for (const [key, col] of Object.entries(cols)) {
+      const v = (o as Record<string, unknown>)[key];
+      if (v !== undefined) {
+        sets.push(`${col}=?`);
+        vals.push(v);
+      }
+    }
+    if (sets.length === 0) return;
+    this.db.prepare(`UPDATE output SET ${sets.join(', ')} WHERE id=?`).run(...vals, id);
   }
 
   getOutput(id: number): OutputRow | null {
@@ -313,6 +358,30 @@ export class Store {
   countUsageSince(sinceIso: string, kind: 'model' | 'image'): number {
     const row = this.db.prepare('SELECT COALESCE(SUM(count), 0) AS total FROM usage WHERE created_at >= ? AND kind=?').get(sinceIso, kind) as { total: number };
     return row.total;
+  }
+
+  // --- spend ledger (USD, from real API usage) ---
+
+  recordSpend(s: {
+    model: string; modelId: string; costUsd: number;
+    inputTokens?: number | null; outputTokens?: number | null; images?: number | null;
+  }): void {
+    this.db.prepare(
+      'INSERT INTO spend (created_at, model, model_id, cost_usd, input_tokens, output_tokens, images) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).run(now(), s.model, s.modelId, s.costUsd, s.inputTokens ?? null, s.outputTokens ?? null, s.images ?? null);
+  }
+
+  spendSince(sinceIso: string): { totalUsd: number; wonderUsd: number } {
+    const rows = this.db.prepare(
+      'SELECT model, COALESCE(SUM(cost_usd), 0) AS total FROM spend WHERE created_at >= ? GROUP BY model',
+    ).all(sinceIso) as Array<{ model: string; total: number }>;
+    let totalUsd = 0;
+    let wonderUsd = 0;
+    for (const r of rows) {
+      totalUsd += r.total;
+      if (r.model === 'wonder') wonderUsd += r.total;
+    }
+    return { totalUsd, wonderUsd };
   }
 
   // --- expiry (visitor data; demo brands/sources are permanent) ---

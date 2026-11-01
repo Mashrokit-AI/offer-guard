@@ -104,6 +104,8 @@ export interface ElementProof {
   core_total: number;
   /** Pixels in the feather ring (allowed to blend; reported, not gated). */
   feather_total: number;
+  /** Compared-pixel coverage: core_total / (core_total + feather_total). */
+  coverage: number;
   pass: boolean;
 }
 
@@ -155,5 +157,13 @@ export function elementProof(input: ElementProofInput): ElementProof {
       }
     }
   }
-  return { scale, core_differ, core_total, feather_total, pass: core_total > 0 && core_differ === 0 };
+  const compared = core_total + feather_total;
+  return {
+    scale,
+    core_differ,
+    core_total,
+    feather_total,
+    coverage: compared > 0 ? core_total / compared : 0,
+    pass: core_total > 0 && core_differ === 0,
+  };
 }

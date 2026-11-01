@@ -1,4 +1,4 @@
-import { api, bboxDiv, BRAND_SLUG, dims, errText, fmtDur, h, modeBadge, modelFooter, presetName, qaBadge, t, type Lang } from './lib.js';
+import { api, bboxDiv, BRAND_SLUG, checkBadge, dims, errText, fmtDur, h, modeBadge, modelFooter, presetName, qaBadge, t, type Lang } from './lib.js';
 import type { OutputDetailDto, PresetDto } from './dto.js';
 
 /** Load a grayscale mask PNG and paint it tinted onto a canvas overlay. */
@@ -51,10 +51,18 @@ export function outputView(lang: Lang, id: number): HTMLElement {
     const preset = presets.find((p) => p.id === d.preset);
     const title = preset ? `${presetName(lang, preset.id, preset.label)} · ${dims(preset.width, preset.height)}` : d.preset;
 
+    const statusBadges = d.checks
+      ? [
+          checkBadge(lang, t(lang, 'check_protected'), d.checks.protected_pixels.status),
+          checkBadge(lang, t(lang, 'check_text'), d.checks.text.status),
+          checkBadge(lang, t(lang, 'check_layout'), d.checks.layout_review.status),
+        ]
+      : [qaBadge(lang, d.qaPass)];
     const head = h('div', { class: 'verdict-banner' },
       h('div', {},
-        h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, qaBadge(lang, d.qaPass), modeBadge(lang, d.mode)),
+        h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, ...statusBadges, modeBadge(lang, d.mode)),
         h('p', {}, title),
+        d.manifest ? h('p', { class: 'muted small' }, t(lang, 'manifest_line', { planner: d.manifest.planner, family: d.manifest.family, n: d.manifest.corrections.length })) : null,
         modelFooter(d.models ?? [], d.traceMs ?? 0),
       ),
     );
@@ -74,19 +82,22 @@ export function outputView(lang: Lang, id: number): HTMLElement {
     // --- overlays ---
     const tglMasks = h('input', { type: 'checkbox', id: 'tgl-masks' }) as HTMLInputElement;
     const tglZones = h('input', { type: 'checkbox', id: 'tgl-zones' }) as HTMLInputElement;
+    const tglPlaced = h('input', { type: 'checkbox', id: 'tgl-placed' }) as HTMLInputElement;
     const tglSafe = h('input', { type: 'checkbox', id: 'tgl-safe' }) as HTMLInputElement;
     const toggles = h('div', { class: 'toggles' },
       // Saved fixtures carry no masks; a dead toggle would only confuse.
       d.masks.length > 0 ? h('label', {}, tglMasks, ` ${t(lang, 'toggle_masks')}`) : null,
       h('label', {}, tglZones, ` ${t(lang, 'toggle_zones')}`),
+      h('label', {}, tglPlaced, ` ${t(lang, 'toggle_placed')}`),
       h('label', {}, tglSafe, ` ${t(lang, 'toggle_safe')}`),
     );
     const maskLayerBefore = h('div', { class: 'overlay' });
     const maskLayerAfter = h('div', { class: 'overlay' });
     const zoneLayer = h('div', { class: 'overlay' });
+    const placedLayer = h('div', { class: 'overlay' });
     const safeLayer = h('div', { class: 'overlay' });
     beforeFrame.append(maskLayerBefore);
-    afterFrame.append(maskLayerAfter, zoneLayer, safeLayer);
+    afterFrame.append(maskLayerAfter, zoneLayer, placedLayer, safeLayer);
 
     tglMasks.addEventListener('change', () => {
       maskLayerBefore.replaceChildren();
@@ -108,33 +119,66 @@ export function outputView(lang: Lang, id: number): HTMLElement {
     });
     const paintZones = (): void => {
       zoneLayer.replaceChildren();
+      placedLayer.replaceChildren();
       safeLayer.replaceChildren();
       if (!d.plan) return;
+      const W = d.plan.width;
+      const H = d.plan.height;
+      const kindClass = (kind: string): string =>
+        kind === 'product' ? 'product' : kind === 'logo' ? 'logo' : kind === 'panel' ? 'panel' : kind === 'headline' ? 'headline' : kind === 'subtext' ? 'subtext' : 'other';
       if (tglZones.checked) {
-        const W = d.plan.width;
-        const H = d.plan.height;
-        if (d.plan.logo) zoneLayer.append(bboxDiv(d.plan.logo, W, H, 'logo', t(lang, 'legend_logo')));
-        d.plan.products.forEach((p, i) => zoneLayer.append(bboxDiv(p, W, H, 'product', `${t(lang, 'legend_product')} ${i + 1}`)));
-        if (d.plan.panel) zoneLayer.append(bboxDiv(d.plan.panel, W, H, 'panel', t(lang, 'legend_panel')));
+        // Template TARGET zones: what the brand asked for (dashed).
+        const zones = d.manifest?.templateZones;
+        if (zones) {
+          for (const [key, box] of Object.entries(zones)) {
+            zoneLayer.append(bboxDiv(box, W, H, 'target', key));
+          }
+        } else if (d.plan.logo) {
+          // Legacy records without a manifest fall back to plan boxes.
+          zoneLayer.append(bboxDiv(d.plan.logo, W, H, 'logo', t(lang, 'legend_logo')));
+          d.plan.products.forEach((p, i) => zoneLayer.append(bboxDiv(p, W, H, 'product', `${t(lang, 'legend_product')} ${i + 1}`)));
+          if (d.plan.panel) zoneLayer.append(bboxDiv(d.plan.panel, W, H, 'panel', t(lang, 'legend_panel')));
+        }
+      }
+      if (tglPlaced.checked && d.manifest) {
+        // ACTUAL placement: resolved manifest boxes == composited pixels.
+        for (const e of d.manifest.elements) {
+          placedLayer.append(bboxDiv(e.box, W, H, kindClass(e.kind), e.id));
+        }
       }
       if (tglSafe.checked) safeLayer.append(bboxDiv(d.plan.safe, d.plan.width, d.plan.height, 'safe'));
     };
     tglZones.addEventListener('change', paintZones);
+    tglPlaced.addEventListener('change', paintZones);
     tglSafe.addEventListener('change', paintZones);
 
     // --- proof ---
     const sections: HTMLElement[] = [head, pair, toggles];
     if (d.proof) {
-      const rows = Object.entries(d.proof).map(([what, pr]) =>
-        h('div', { class: 'proof-num' },
+      const rows = Object.entries(d.proof).map(([what, pr]) => {
+        const pct = typeof pr.coverage === 'number' ? t(lang, 'proof_coverage', { pct: Math.round(pr.coverage * 100) }) : null;
+        return h('div', { class: 'proof-num' },
           h('div', { class: `v ${pr.pass ? 'ok' : 'bad'}` }, String(pr.core_differ)),
           h('div', { class: 'k' }, t(lang, 'proof_row', { what, diff: pr.core_differ, scale: pr.scale.toFixed(2) })),
-        ),
-      );
+          pct ? h('div', { class: 'muted small' }, `${t(lang, 'proof_core_label')} · ${pct}`) : null,
+        );
+      });
       sections.push(
         h('h2', {}, t(lang, 'proof_title')),
         h('div', { class: 'proof-nums' }, ...rows),
         h('p', { class: 'muted small' }, t(lang, 'proof_feather_note')),
+      );
+    }
+    // --- repair before/after ---
+    if (d.beforeImage) {
+      const rb = h('img', { src: d.beforeImage, alt: t(lang, 'repair_before') }) as HTMLImageElement;
+      const ra = h('img', { src: d.image, alt: t(lang, 'repair_after') }) as HTMLImageElement;
+      sections.push(
+        h('h2', {}, t(lang, 'repair_title')),
+        h('div', { class: 'evidence2' },
+          h('div', { class: 'ev-col' }, h('h3', {}, t(lang, 'repair_before')), h('div', { class: 'img-frame' }, rb)),
+          h('div', { class: 'ev-col' }, h('h3', {}, t(lang, 'repair_after')), h('div', { class: 'img-frame' }, ra)),
+        ),
       );
     }
     // --- QA ---
@@ -195,13 +239,14 @@ export function outputView(lang: Lang, id: number): HTMLElement {
     );
     const spark = d.trace.filter((e) => e.tool_or_model.startsWith('model:muse-spark')).length;
     const sam = d.trace.filter((e) => e.tool_or_model.startsWith('model:sam')).length;
+    const wonder = d.trace.filter((e) => e.tool_or_model.startsWith('model:muse-wonder')).length;
     const images = d.trace.filter((e) => e.tool_or_model.startsWith('model:muse-image')).length;
-    const other = d.trace.length - spark - sam - images;
+    const other = d.trace.length - spark - sam - wonder - images;
     // Open by default on desktop so judges see the live model calls; closed
     // on small screens where it would push the images down.
     const desktop = window.matchMedia('(min-width: 900px)').matches;
     const details = h('details', { class: 'card', id: 'trace', style: 'margin-top:18px', ...(desktop ? { open: 'true' } : {}) },
-      h('summary', {}, `${t(lang, 'trace_title')} · ${t(lang, 'trace_calls_line', { spark, sam, images, other })}`),
+      h('summary', {}, `${t(lang, 'trace_title')} · ${t(lang, 'trace_calls_line', { spark, sam, wonder, images, other })}`),
       h('div', { class: 'table-scroll' },
         h('table', { class: 'cmp' },
           h('tr', {}, h('th', {}, t(lang, 'trace_step')), h('th', {}, t(lang, 'trace_tool')), h('th', {}, t(lang, 'trace_io')), h('th', {}, t(lang, 'trace_dur')), h('th', {}, '')),

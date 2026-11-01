@@ -11,6 +11,8 @@ import { PRESETS, presetById } from '../../shared/presets.js';
 import { templateSpecSchema } from '../../shared/schemas.js';
 import { DEMO_JOB_ID } from '../adfit/seed.js';
 import { prepareSource, runOutput, runPool, type FitMode, type OutputTemplate, type PreparedSource } from '../adfit/pipeline.js';
+import { rowStatusFromChecks, runBatchSource } from '../adfit/batch.js';
+import { CostLedger } from '../models/costs.js';
 import { matchBrand } from '../models/brand-match.js';
 import { createModelClient } from '../models/client.js';
 import { readTemplate, specBoxesNormalized } from '../models/template-read.js';
@@ -40,6 +42,7 @@ export interface AppDeps {
   makeImageConfig?: () => ImageGenConfig;
   extractModel?: string;
   samModel?: string;
+  wonderModel?: string;
 }
 
 const CSP =
@@ -133,6 +136,7 @@ export function createApp(deps: AppDeps): Hono {
     });
   const extractModel = deps.extractModel ?? 'muse-spark-1.3';
   const samModel = deps.samModel ?? 'sam-3.1';
+  const wonderModel = deps.wonderModel ?? 'muse-wonder-1.0';
 
   const jobs = new JobManager({ queueMax: cfg.queueMax, jobTimeoutMs: cfg.jobTimeoutMs });
   const limiter = new RateLimiter(cfg.ratePerHour);
@@ -149,6 +153,12 @@ export function createApp(deps: AppDeps): Hono {
   const capped = (kind: 'model' | 'image'): boolean => {
     const limit = kind === 'model' ? cfg.dailyModelCalls : cfg.dailyImages;
     return withStore((s) => s.countUsageSince(utcMidnightIso(), kind)) >= limit;
+  };
+
+  /** Spend caps from the USD ledger. Total over cap blocks new live jobs (busy); Wonder over cap only disables Wonder. */
+  const spendCaps = (): { wonderOver: boolean; allOver: boolean } => {
+    const spend = withStore((s) => s.spendSince(utcMidnightIso()));
+    return { wonderOver: spend.wonderUsd >= cfg.wonderDailyUsd, allOver: spend.totalUsd >= cfg.dailyUsd };
   };
 
   /** Best-effort unlink of repo-local data files (never fixtures). */
@@ -217,24 +227,18 @@ export function createApp(deps: AppDeps): Hono {
     presetId: string;
   }
 
-  /** Execute one generation job: prepare sources, run cells 2-at-a-time. */
-  const executeJob = async (
-    storeJobId: string,
-    cells: CellDef[],
-    mode: FitMode,
+  /** Resolve template + frame per size once (shared by fast and protected paths). */
+  const resolvePerSize = async (
     brandId: string | null,
-    brandName: string | null,
-    prepareTraces: Map<string, TraceCollector>,
-    onRow: (row: JobRow) => void,
-  ): Promise<{ jobId: string }> => {
-    // Resolve template + frame per size once.
+    presetIds: string[],
+  ): Promise<Map<string, { template: OutputTemplate | null; framePng: Buffer | null }>> => {
     const perSize = new Map<string, { template: OutputTemplate | null; framePng: Buffer | null }>();
-    for (const cell of cells) {
-      if (perSize.has(cell.presetId)) continue;
+    for (const presetId of presetIds) {
+      if (perSize.has(presetId)) continue;
       let template: OutputTemplate | null = null;
       let framePng: Buffer | null = null;
       if (brandId) {
-        const row = withStore((s) => s.templateForSize(brandId, cell.presetId));
+        const row = withStore((s) => s.templateForSize(brandId, presetId));
         if (row?.spec_json) {
           try {
             const spec = templateSpecSchema.parse(JSON.parse(row.spec_json));
@@ -246,10 +250,42 @@ export function createApp(deps: AppDeps): Hono {
           }
         }
       }
-      perSize.set(cell.presetId, { template, framePng });
+      perSize.set(presetId, { template, framePng });
     }
+    return perSize;
+  };
 
-    const models = { client: makeClient(), extractModel, samModel, image: makeImageConfig() };
+  /** Persist full-frame masks for the overlay UI + source analysis row. */
+  const persistSourceLayers = async (rawId: string, p: PreparedSource): Promise<void> => {
+    const maskMap: Record<string, string> = {};
+    if (p.masks.size > 0) {
+      const dir = join(repoRoot, 'data', 'masks', rawId);
+      await mkdir(dir, { recursive: true });
+      for (const [mid, mask] of p.masks) {
+        const px = Buffer.alloc(mask.length);
+        for (let i = 0; i < px.length; i++) px[i] = mask[i] ? 255 : 0;
+        await sharp(px, { raw: { width: p.width, height: p.height, channels: 1 } }).png().toFile(join(dir, `${mid}.png`));
+        maskMap[mid] = `data/masks/${rawId}/${mid}.png`;
+      }
+    }
+    withStore((s) => {
+      s.setSourceAnalysis(rawId, JSON.stringify(p.analysis), JSON.stringify(maskMap), null);
+      s.recordUsage('model', p.modelCalls);
+    });
+  };
+
+  /** Execute one fast job: prepared sources, cells in a worker pool. */
+  const executeJob = async (
+    storeJobId: string,
+    cells: CellDef[],
+    mode: FitMode,
+    brandId: string | null,
+    brandName: string | null,
+    prepareTraces: Map<string, TraceCollector>,
+    onRow: (row: JobRow) => void,
+  ): Promise<{ jobId: string }> => {
+    const perSize = await resolvePerSize(brandId, cells.map((c) => c.presetId));
+    const models = { client: makeClient(), extractModel, samModel, wonderModel, image: makeImageConfig() };
     let jobModels = 0;
     let jobImages = 0;
     const runCell = async (cell: CellDef): Promise<void> => {
@@ -271,16 +307,27 @@ export function createApp(deps: AppDeps): Hono {
         jobModels += outcome.modelCalls;
         jobImages += outcome.imageCalls;
         const status = outcome.qa.pass ? 'pass' : 'needs_review';
+        const checks = {
+          protected_pixels: { status: 'pending', detail: 'fast mode redraws pixels (nothing protected)' },
+          text: outcome.qa.texts_read.every((t) => t.exact)
+            ? { status: 'passed', detail: 're-rendered text verified exact' }
+            : { status: 'needs_review', detail: 'text mismatch in QA read' },
+          layout_review: outcome.qa.pass
+            ? { status: 'passed', detail: 'Spark QA passed' }
+            : { status: 'needs_review', detail: outcome.qa.reasons[0]?.slice(0, 200) ?? 'QA failed' },
+          repaired: null,
+        };
         const outputId = withStore((s) => {
           const id = s.insertOutput({
             jobId: storeJobId, sourceId: cell.source.id, preset: preset.id, mode, status,
             imagePath: `data/outputs/${storeJobId}/${fileName}`,
-            planJson: JSON.stringify(outcome.plan),
+            planJson: JSON.stringify({ ...outcome.plan, manifest: outcome.manifest }),
             proofJson: outcome.proofs ? JSON.stringify(outcome.proofs) : null,
             qaJson: JSON.stringify(outcome.qa),
             retries: outcome.retries,
             modelCalls: outcome.modelCalls, imageCalls: outcome.imageCalls,
             latencyMs: Date.now() - start, traceJson: JSON.stringify(trace.all()), error: null,
+            checksJson: JSON.stringify(checks),
           });
           s.recordUsage('model', outcome.modelCalls);
           s.recordUsage('image', outcome.imageCalls);
@@ -300,7 +347,133 @@ export function createApp(deps: AppDeps): Hono {
         onRow({ outputId, sourceId: cell.source.id, sourceIndex: cell.sourceIndex, preset: preset.id, status: 'failed', retries: 0, ...traceSummaryOf(trace.all()), error: message });
       }
     };
-    await runPool(cells, 2, runCell);
+    await runPool(cells, cfg.sizeConcurrency, runCell);
+    const failed = withStore((s) => s.outputsForJob(storeJobId).filter((o) => o.status === 'failed').length);
+    const total = withStore((s) => s.outputsForJob(storeJobId).length);
+    withStore((s) => s.finishJob(storeJobId, failed === total && total > 0 ? 'failed' : 'done', null, jobModels, jobImages));
+    return { jobId: storeJobId };
+  };
+
+  /**
+   * Execute one protected job through the batch engine: per source,
+   * analyze → SAM ∥ Wonder plan → plates → streamed previews (review
+   * pending) → batch review → repair → final rows via onUpdate.
+   */
+  const executeProtected = async (
+    storeJobId: string,
+    raws: Array<{ id: string; bytes: Buffer; width: number; height: number }>,
+    sizes: string[],
+    brandId: string | null,
+    brandName: string | null,
+    onRow: (row: JobRow) => void,
+    onUpdate: (row: JobRow) => void,
+  ): Promise<{ jobId: string }> => {
+    const perSize = await resolvePerSize(brandId, sizes);
+    const models = { client: makeClient(), extractModel, samModel, wonderModel, image: makeImageConfig() };
+    const ledger = new CostLedger(Number.POSITIVE_INFINITY);
+    const wonderAllowed = !spendCaps().wonderOver;
+    let jobModels = 0;
+    let jobImages = 0;
+    for (const raw of raws) {
+      const sourceIndex = raws.findIndex((r) => r.id === raw.id);
+      const batchSizes = sizes
+        .map((presetId) => ({ preset: presetById(presetId), ...(perSize.get(presetId) ?? { template: null, framePng: null }), sourceIndex }))
+        .filter((s): s is { preset: NonNullable<ReturnType<typeof presetById>>; template: OutputTemplate | null; framePng: Buffer | null; sourceIndex: number } => s.preset !== null);
+      const outDir = join(repoRoot, 'data', 'outputs', storeJobId);
+      await mkdir(outDir, { recursive: true });
+      // Preview rows first (review pending), then finals via onUpdate.
+      const previewIds = new Map<string, number>();
+      let batch: Awaited<ReturnType<typeof runBatchSource>> | null = null;
+      try {
+        batch = await runBatchSource({
+          models,
+          input: { id: raw.id, bytes: raw.bytes, mimeType: 'image/png', width: raw.width, height: raw.height },
+          sizes: batchSizes,
+          brandName,
+          jobTag: storeJobId,
+          repoRoot,
+          ledger,
+          wonderAllowed,
+          concurrency: cfg.sizeConcurrency,
+          onPreview: async (o) => {
+            if (!o.png || !o.plan || !o.manifest) return;
+            const fileName = `${sourceIndex}-${o.preset.id}.png`;
+            await writeFile(join(outDir, fileName), o.png);
+            const outputId = withStore((s) =>
+              s.insertOutput({
+                jobId: storeJobId, sourceId: raw.id, preset: o.preset.id, mode: 'protected', status: 'needs_review',
+                imagePath: `data/outputs/${storeJobId}/${fileName}`,
+                planJson: JSON.stringify({ ...o.plan, manifest: o.manifest }),
+                proofJson: o.proofs ? JSON.stringify(o.proofs) : null,
+                qaJson: null, retries: 0, modelCalls: 0, imageCalls: o.imageCalls,
+                latencyMs: o.latencyMs, traceJson: JSON.stringify(o.trace.all()), error: null,
+                checksJson: JSON.stringify(o.checks),
+              }),
+            );
+            previewIds.set(o.preset.id, outputId);
+            onRow({ outputId, sourceId: raw.id, sourceIndex, preset: o.preset.id, status: 'needs_review', retries: 0, pending: true, ...traceSummaryOf(o.trace.all()) });
+          },
+        });
+      } catch (e) {
+        const message = `${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
+        for (const presetId of sizes) {
+          if (previewIds.has(presetId)) continue;
+          const outputId = withStore((s) =>
+            s.insertOutput({
+              jobId: storeJobId, sourceId: raw.id, preset: presetId, mode: 'protected', status: 'failed',
+              imagePath: '', planJson: '{}', proofJson: null, qaJson: null, retries: 0,
+              modelCalls: 0, imageCalls: 0, latencyMs: 0, traceJson: '[]', error: message,
+            }),
+          );
+          onRow({ outputId, sourceId: raw.id, sourceIndex, preset: presetId, status: 'failed', retries: 0, ...traceSummaryOf([]), error: message });
+        }
+        continue;
+      }
+      await persistSourceLayers(raw.id, batch.source);
+      jobModels += batch.source.modelCalls + batch.modelCalls;
+      for (const o of batch.outcomes) {
+        jobImages += o.imageCalls;
+        const outputId = previewIds.get(o.preset.id);
+        if (o.error || !o.png || !o.plan || !o.manifest || outputId === undefined) {
+          if (outputId === undefined) {
+            const oid = withStore((s) =>
+              s.insertOutput({
+                jobId: storeJobId, sourceId: raw.id, preset: o.preset.id, mode: 'protected', status: 'failed',
+                imagePath: '', planJson: o.plan ? JSON.stringify({ ...o.plan, manifest: o.manifest }) : '{}',
+                proofJson: null, qaJson: null, retries: 0, modelCalls: 0, imageCalls: o.imageCalls,
+                latencyMs: o.latencyMs, traceJson: JSON.stringify(o.trace.all()), error: o.error ?? 'compose failed',
+              }),
+            );
+            onRow({ outputId: oid, sourceId: raw.id, sourceIndex, preset: o.preset.id, status: 'failed', retries: 0, ...traceSummaryOf(o.trace.all()), error: o.error ?? undefined });
+          }
+          continue;
+        }
+        const fileName = `${sourceIndex}-${o.preset.id}.png`;
+        await writeFile(join(outDir, fileName), o.png);
+        if (o.repaired) {
+          await writeFile(join(outDir, `before-${sourceIndex}-${o.preset.id}.png`), o.repaired.beforePng);
+          if (o.checks.repaired) o.checks.repaired.before = `data/outputs/${storeJobId}/before-${sourceIndex}-${o.preset.id}.png`;
+        }
+        const status = rowStatusFromChecks(o.checks);
+        withStore((s) => {
+          s.updateOutput(outputId, {
+            status,
+            planJson: JSON.stringify({ ...o.plan, manifest: o.manifest }),
+            proofJson: o.proofs ? JSON.stringify(o.proofs) : null,
+            imageCalls: o.imageCalls,
+            latencyMs: o.latencyMs,
+            traceJson: JSON.stringify(o.trace.all()),
+            checksJson: JSON.stringify(o.checks),
+          });
+          s.recordUsage('image', o.imageCalls);
+        });
+        onUpdate({ outputId, sourceId: raw.id, sourceIndex, preset: o.preset.id, status, retries: o.repaired ? 1 : 0, ...traceSummaryOf(o.trace.all()) });
+      }
+      withStore((s) => s.recordUsage('model', batch.source.modelCalls + batch.modelCalls));
+    }
+    for (const entry of ledger.all()) {
+      withStore((s) => s.recordSpend({ model: entry.model, modelId: entry.modelId, costUsd: entry.costUsd, inputTokens: entry.inputTokens, outputTokens: entry.outputTokens, images: entry.images }));
+    }
     const failed = withStore((s) => s.outputsForJob(storeJobId).filter((o) => o.status === 'failed').length);
     const total = withStore((s) => s.outputsForJob(storeJobId).length);
     withStore((s) => s.finishJob(storeJobId, failed === total && total > 0 ? 'failed' : 'done', null, jobModels, jobImages));
@@ -311,7 +484,7 @@ export function createApp(deps: AppDeps): Hono {
   const prepareAll = async (
     raws: Array<{ id: string; bytes: Buffer; width: number; height: number }>,
   ): Promise<{ prepared: PreparedSource[]; traces: Map<string, TraceCollector>; failed: Map<string, string> }> => {
-    const models = { client: makeClient(), extractModel, samModel, image: makeImageConfig() };
+    const models = { client: makeClient(), extractModel, samModel, wonderModel, image: makeImageConfig() };
     const prepared: PreparedSource[] = [];
     const traces = new Map<string, TraceCollector>();
     const failed = new Map<string, string>();
@@ -502,6 +675,8 @@ export function createApp(deps: AppDeps): Hono {
   inner.patch('/api/templates/:id', async (c) => {
     const row = withStore((s) => s.getTemplate(c.req.param('id')));
     if (!row) return err(c, 404, 'err_not_found');
+    const owner = withStore((s) => s.getBrand(row.brand_id));
+    if (owner?.is_demo === 1) return err(c, 400, 'err_bad_request');
     let body: unknown;
     try {
       body = await c.req.json();
@@ -628,6 +803,10 @@ export function createApp(deps: AppDeps): Hono {
       await unlinkData(raws.filter((r) => !r.fixture).map((r) => r.relPath));
       return err(c, 503, 'err_live_off');
     }
+    if (spendCaps().allOver) {
+      await unlinkData(raws.filter((r) => !r.fixture).map((r) => r.relPath));
+      return err(c, 429, 'err_busy');
+    }
 
     for (const r of raws) {
       withStore((s) => s.insertSource({ id: r.id, imagePath: r.relPath, width: r.width, height: r.height, expiresAt: dayFromNow() }));
@@ -636,7 +815,10 @@ export function createApp(deps: AppDeps): Hono {
     withStore((s) => s.insertJob({ id: storeJobId, brandId, mode, sizes, sources: raws.map((r) => r.id) }));
 
     const total = raws.length * sizes.length;
-    const job = jobs.submit('generate', total, async (onRow) => {
+    const job = jobs.submit('generate', total, async (onRow, onUpdate) => {
+      if (mode === 'protected') {
+        return executeProtected(storeJobId, raws, sizes, brandId, brand?.name ?? null, onRow, onUpdate);
+      }
       const { prepared, traces, failed } = await prepareAll(raws);
       if (failed.size > 0) {
         withStore((s) => s.recordUsage('model', 0));
@@ -680,6 +862,7 @@ export function createApp(deps: AppDeps): Hono {
     if (!source) return err(c, 404, 'err_not_found');
     if (!limiter.check(clientIp(c, cfg.trustProxy))) return err(c, 429, 'err_rate');
     if (capped('model') || capped('image')) return err(c, 503, 'err_live_off');
+    if (spendCaps().allOver) return err(c, 429, 'err_busy');
 
     const bytes = await readContainedFile(repoRoot, source.image_path);
     if (!bytes) return err(c, 404, 'err_not_found');
@@ -687,7 +870,10 @@ export function createApp(deps: AppDeps): Hono {
     const mode = (prev.mode === 'fast' ? 'fast' : 'protected') as FitMode;
     withStore((s) => s.insertJob({ id: storeJobId, brandId: prevJob.brand_id, mode, sizes: [prev.preset], sources: [source.id] }));
     const brand = prevJob.brand_id ? withStore((s) => s.getBrand(prevJob.brand_id as string)) : null;
-    const job = jobs.submit('regenerate', 1, async (onRow) => {
+    const job = jobs.submit('regenerate', 1, async (onRow, onUpdate) => {
+      if (mode === 'protected') {
+        return executeProtected(storeJobId, [{ id: source.id, bytes, width: source.width, height: source.height }], [prev.preset], prevJob.brand_id, brand?.name ?? null, onRow, onUpdate);
+      }
       const { prepared, traces, failed } = await prepareAll([{ id: source.id, bytes, width: source.width, height: source.height }]);
       if (failed.size > 0 || prepared.length === 0) {
         const message = failed.get(source.id) ?? 'source analysis failed';

@@ -1,0 +1,43 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.052,
+      "y": 0.031,
+      "w": 0.213,
+      "h": 0.031
+    },
+    "corner": "top-left"
+  },
+  "headline_zone": {
+    "x": 0.06,
+    "y": 0.078,
+    "w": 0.88,
+    "h": 0.06
+  },
+  "subtext_zone": {
+    "x": 0.06,
+    "y": 0.146,
+    "w": 0.602,
+    "h": 0.025
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.083,
+      "y": 0.672,
+      "w": 0.833,
+      "h": 0.115
+    },
+    "color": "#f7f3ea",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.194,
+    "y": 0.208,
+    "w": 0.657,
+    "h": 0.292
+  },
+  "frames": [],
+  "background_style": "photographic lifestyle background, sof, sunlit spa countertop with eucalyptus, bright and airy, with soft white shade for text legibility",
+  "text_align": "center",
+  "direction": "ltr"
+}

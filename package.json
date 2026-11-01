@@ -9,6 +9,8 @@
   },
   "scripts": {
     "render:adfit-fixtures": "tsx scripts/render-adfit-fixtures.ts",
+    "render:complex-fixtures": "tsx scripts/render-complex-fixtures.ts",
+    "engine:run": "tsx scripts/engine-run.ts",
     "adfit:live": "tsx scripts/adfit-live.ts",
     "ui-shots": "tsx scripts/ui-shots.ts",
     "build:web": "tsx scripts/build-web.ts",

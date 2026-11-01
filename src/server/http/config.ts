@@ -25,6 +25,9 @@ export const httpConfigSchema = z.object({
   queueMax: z.coerce.number().int().min(0).default(3),
   uploadMaxBytes: z.coerce.number().int().min(1024).default(10 * 1024 * 1024),
   uploadMaxPixels: z.coerce.number().int().min(10_000).default(24_000_000),
+  sizeConcurrency: z.coerce.number().int().min(1).max(8).default(4),
+  wonderDailyUsd: z.coerce.number().min(0).default(3),
+  dailyUsd: z.coerce.number().min(0).default(8),
 });
 
 export type HttpConfig = z.infer<typeof httpConfigSchema>;
@@ -42,5 +45,8 @@ export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig
     queueMax: env.ADFIT_QUEUE_MAX,
     uploadMaxBytes: env.ADFIT_UPLOAD_MAX_BYTES,
     uploadMaxPixels: env.ADFIT_UPLOAD_MAX_PIXELS,
+    sizeConcurrency: env.ADFIT_SIZE_CONCURRENCY,
+    wonderDailyUsd: env.ADFIT_WONDER_DAILY_USD,
+    dailyUsd: env.ADFIT_DAILY_USD,
   });
 }

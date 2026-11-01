@@ -194,8 +194,13 @@ export function buildJob(s: Store, id: string): JobDto | null {
 export interface OutputDetailDto extends OutputCardDto {
   jobId: string;
   plan: unknown;
+  manifest: unknown;
   proof: unknown;
   qa: unknown;
+  /** Three independent statuses (protected pixels / text / layout review). */
+  checks: unknown;
+  /** Before-repair image (repaired sizes only). */
+  beforeImage: string | null;
   trace: unknown[];
   error: string | null;
   latencyMs: number;
@@ -224,7 +229,8 @@ export function buildOutput(s: Store, id: number): OutputDetailDto | null {
       return null;
     }
   };
-  const plan = parse(o.plan_json) as { template_id?: string } | null;
+  const plan = parse(o.plan_json) as { template_id?: string; manifest?: unknown } | null;
+  const checks = parse(o.checks_json) as { repaired?: { before?: string } | null } | null;
   const source = s.getSource(o.source_id);
   let masks: string[] = [];
   try {
@@ -234,12 +240,18 @@ export function buildOutput(s: Store, id: number): OutputDetailDto | null {
     masks = [];
   }
   const templateImage = plan?.template_id ? `media/template/${plan.template_id}` : null;
+  const beforeImage = typeof checks?.repaired?.before === 'string' && checks.repaired.before.length > 0
+    ? `media/before/${o.id}`
+    : null;
   return {
     ...outputCard(o, sources),
     jobId: o.job_id,
     plan,
+    manifest: plan?.manifest ?? null,
     proof: parse(o.proof_json),
     qa: parse(o.qa_json),
+    checks,
+    beforeImage,
     trace: (parse(o.trace_json) as unknown[]) ?? [],
     error: o.error,
     latencyMs: o.latency_ms,

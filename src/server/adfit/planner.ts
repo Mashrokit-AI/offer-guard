@@ -98,6 +98,25 @@ export function freeOtherTexts(source: SourceAnalysis): SourceAnalysis['other_te
   return source.other_texts.filter((t) => !travelsWithPixels(source, t.bbox));
 }
 
+/**
+ * Whether headline/subtext render as free text on this output. Text carried
+ * by the panel (or a product/logo) travels with those pixels — pasted or
+ * rebuilt — and must NOT also render free; that double-render reads as a
+ * ghost (seen live on GALI). Safety: when the panel itself was dropped but a
+ * text box exists, the text survives.
+ */
+export function freeHeadlineSubtext(
+  a: SourceAnalysis,
+  plan: { headline: unknown; subtext: unknown; panel: unknown },
+): { headline: boolean; subtext: boolean } {
+  const hTravels = a.headline ? travelsWithPixels(a, a.headline.bbox) : true;
+  const sTravels = a.subtext ? travelsWithPixels(a, a.subtext.bbox) : true;
+  return {
+    headline: !!a.headline && (!hTravels || (!!plan.headline && !plan.panel)),
+    subtext: !!a.subtext && (!sTravels || (!!plan.subtext && !plan.panel)),
+  };
+}
+
 function centerIn(bbox: { x: number; y: number; w: number; h: number }, outer: { x: number; y: number; w: number; h: number }): boolean {
   const cx = bbox.x + bbox.w / 2;
   const cy = bbox.y + bbox.h / 2;

@@ -282,6 +282,18 @@ describe('brands', () => {
     seedBrand(dbPath, true);
     expect((await app.request('/api/templates/demo-t', { method: 'DELETE' })).status).toBe(400);
   });
+
+  it('refuses PATCH on demo templates (read-only fixtures)', async () => {
+    const root = repoRoot();
+    const { app, dbPath } = testApp(root);
+    seedBrand(dbPath);
+    seedBrand(dbPath, true);
+    const spec = JSON.parse(SPEC) as Record<string, unknown>;
+    expect((await app.request('/api/templates/demo-t', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ spec }) })).status).toBe(400);
+    expect((await app.request('/api/templates/demo-t', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ preset: 'fb-feed' }) })).status).toBe(400);
+    // Visitor templates still patch fine.
+    expect((await app.request('/api/templates/t1', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ spec }) })).status).toBe(200);
+  });
 });
 
 describe('match', () => {
@@ -380,6 +392,20 @@ describe('live-job guards', () => {
     }
     const post2 = await capped.app.request('/api/jobs', { method: 'POST', body: await withFiles(jobForm(), 1) });
     expect(post2.status).toBe(503);
+  });
+
+  it('shows busy when the daily USD ledger cap is exceeded', async () => {
+    const root = repoRoot();
+    const { app, dbPath } = testApp(root, { http: { dailyUsd: 8, wonderDailyUsd: 3 } });
+    const store = Store.open(dbPath);
+    try {
+      store.recordSpend({ model: 'image', modelId: 'muse-image-1.0', costUsd: 8.5, images: 850 });
+    } finally {
+      store.close();
+    }
+    const post = await app.request('/api/jobs', { method: 'POST', body: await withFiles(jobForm(), 1) });
+    expect(post.status).toBe(429);
+    expect(await post.json()).toEqual({ error: 'err_busy' });
   });
 
   it('runs jobs to completion and streams SSE with poll snapshots', async () => {

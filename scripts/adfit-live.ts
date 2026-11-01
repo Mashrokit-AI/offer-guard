@@ -63,6 +63,7 @@ const models = {
   client,
   extractModel: modelCfg.MODEL_EXTRACT,
   samModel: modelCfg.MODEL_SAM,
+  wonderModel: modelCfg.MODEL_WONDER,
   image: { baseUrl: modelCfg.MODEL_API_BASE, apiKey: modelCfg.MODEL_API_KEY, model: modelCfg.MODEL_IMAGE },
 };
 

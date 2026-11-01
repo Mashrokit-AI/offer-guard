@@ -8,6 +8,7 @@ export const modelConfigSchema = z.object({
   MODEL_EXTRACT: z.string().trim().min(1, 'MODEL_EXTRACT must not be empty').default('muse-spark-1.3'),
   MODEL_SAM: z.string().trim().min(1, 'MODEL_SAM must not be empty').default('sam-3.1'),
   MODEL_IMAGE: z.string().trim().min(1, 'MODEL_IMAGE must not be empty').default('muse-image-1.0'),
+  MODEL_WONDER: z.string().trim().min(1, 'MODEL_WONDER must not be empty').default('muse-wonder-1.0'),
 });
 
 export type ModelConfig = z.infer<typeof modelConfigSchema>;
@@ -19,6 +20,7 @@ export function loadModelConfig(env: NodeJS.ProcessEnv = process.env): ModelConf
     MODEL_EXTRACT: env.MODEL_EXTRACT,
     MODEL_SAM: env.MODEL_SAM,
     MODEL_IMAGE: env.MODEL_IMAGE,
+    MODEL_WONDER: env.MODEL_WONDER,
   });
 }
 
@@ -30,5 +32,6 @@ export function describeModelConfigForLog(config: ModelConfig): Record<string, s
     MODEL_EXTRACT: config.MODEL_EXTRACT,
     MODEL_SAM: config.MODEL_SAM,
     MODEL_IMAGE: config.MODEL_IMAGE,
+    MODEL_WONDER: config.MODEL_WONDER,
   };
 }

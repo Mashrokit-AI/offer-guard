@@ -88,6 +88,42 @@ export interface TraceEventDto {
   cached: boolean;
 }
 
+export interface ManifestElementDto {
+  id: string;
+  kind: string;
+  box: { x: number; y: number; w: number; h: number };
+  group: string | null;
+  z: number;
+  align: string | null;
+  scale: number | null;
+  source: string;
+}
+
+export interface ManifestDto {
+  preset: string;
+  width: number;
+  height: number;
+  family: string;
+  planner: string;
+  safe: { x: number; y: number; w: number; h: number };
+  elements: ManifestElementDto[];
+  templateZones: Record<string, { x: number; y: number; w: number; h: number }> | null;
+  corrections: string[];
+  rationale: string | null;
+}
+
+export interface CheckEntryDto {
+  status: 'pending' | 'passed' | 'fixed' | 'needs_review';
+  detail: string;
+}
+
+export interface ChecksDto {
+  protected_pixels: CheckEntryDto;
+  text: CheckEntryDto;
+  layout_review: CheckEntryDto;
+  repaired: { before: string; patches: string[] } | null;
+}
+
 export interface OutputDetailDto extends OutputCardDto {
   jobId: string;
   plan: {
@@ -107,7 +143,10 @@ export interface OutputDetailDto extends OutputCardDto {
     logo_scale: number | null;
     notes: string[];
   } | null;
-  proof: Record<string, { scale: number; core_differ: number; core_total: number; feather_total: number; pass: boolean }> | null;
+  manifest: ManifestDto | null;
+  checks: ChecksDto | null;
+  beforeImage: string | null;
+  proof: Record<string, { scale: number; core_differ: number; core_total: number; feather_total: number; coverage?: number; pass: boolean }> | null;
   qa: {
     pass: boolean;
     reasons: string[];

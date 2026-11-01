@@ -1,6 +1,73 @@
 import type { RgbaImage } from '../repair/composite.js';
 import type { PixelBox } from '../../shared/geometry.js';
 
+function hex(r: number, g: number, b: number): string {
+  const h = (v: number): string => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+
+/**
+ * Pixel-sampled panel fill: median color of a grid over the panel bbox,
+ * IGNORING dark/light text outliers by taking the median (text pixels are a
+ * minority). This is the color a rebuilt panel is filled with.
+ */
+export function samplePanelColor(rgba: RgbaImage, box: PixelBox): string {
+  const x1 = Math.max(0, Math.min(rgba.width - 1, Math.round(box.x)));
+  const y1 = Math.max(0, Math.min(rgba.height - 1, Math.round(box.y)));
+  const x2 = Math.max(x1 + 1, Math.min(rgba.width, Math.round(box.x + box.w)));
+  const y2 = Math.max(y1 + 1, Math.min(rgba.height, Math.round(box.y + box.h)));
+  const rs: number[] = [];
+  const gs: number[] = [];
+  const bs: number[] = [];
+  const step = Math.max(1, Math.floor(Math.min(x2 - x1, y2 - y1) / 24));
+  for (let y = y1; y < y2; y += step) {
+    for (let x = x1; x < x2; x += step) {
+      const o = (y * rgba.width + x) * 4;
+      rs.push(rgba.data[o] as number);
+      gs.push(rgba.data[o + 1] as number);
+      bs.push(rgba.data[o + 2] as number);
+    }
+  }
+  const med = (v: number[]): number => {
+    const s = [...v].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)] ?? 255;
+  };
+  return hex(med(rs), med(gs), med(bs));
+}
+
+/**
+ * Panel complexity: per-channel standard deviation over the panel's BORDER
+ * ring only (outer 12% — background, not text). A flat or gradient panel
+ * scores low (rebuild it); photo texture or illustration scores high (paste
+ * it, flagged when too small). Sampling the full box would mistake text for
+ * texture (seen live: white type on flat orange scored "complex").
+ * Threshold tuned on flat panels (~2-8) vs photographic regions (>40).
+ */
+export function panelComplexity(rgba: RgbaImage, box: PixelBox): { stdev: number; complex: boolean } {
+  const x1 = Math.max(0, Math.min(rgba.width - 1, Math.round(box.x)));
+  const y1 = Math.max(0, Math.min(rgba.height - 1, Math.round(box.y)));
+  const x2 = Math.max(x1 + 1, Math.min(rgba.width, Math.round(box.x + box.w)));
+  const y2 = Math.max(y1 + 1, Math.min(rgba.height, Math.round(box.y + box.h)));
+  const ring = Math.max(2, Math.round(Math.min(x2 - x1, y2 - y1) * 0.12));
+  const vals: Array<[number, number, number]> = [];
+  const step = Math.max(1, Math.floor(Math.min(x2 - x1, y2 - y1) / 24));
+  for (let y = y1; y < y2; y += step) {
+    for (let x = x1; x < x2; x += step) {
+      const border = x < x1 + ring || x >= x2 - ring || y < y1 + ring || y >= y2 - ring;
+      if (!border) continue;
+      const o = (y * rgba.width + x) * 4;
+      vals.push([rgba.data[o] as number, rgba.data[o + 1] as number, rgba.data[o + 2] as number]);
+    }
+  }
+  if (vals.length === 0) return { stdev: 0, complex: false };
+  const mean = [0, 1, 2].map((c) => vals.reduce((s, v) => s + (v[c] as number), 0) / vals.length);
+  const variance =
+    vals.reduce((s, v) => s + [0, 1, 2].reduce((t, c) => t + ((v[c] as number) - (mean[c] as number)) ** 2, 0), 0) /
+    (vals.length * 3);
+  const stdev = Math.sqrt(variance);
+  return { stdev, complex: stdev > 28 };
+}
+
 /**
  * Snap a Spark panel bbox out to the panel's visual edges. Spark tends to fit
  * the text block, clipping the panel's padding (and with it, sub-line

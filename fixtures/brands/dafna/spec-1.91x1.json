@@ -1,0 +1,43 @@
+{
+  "logo": {
+    "box": {
+      "x": 0.75,
+      "y": 0.08,
+      "w": 0.192,
+      "h": 0.089
+    },
+    "corner": "top-right"
+  },
+  "headline_zone": {
+    "x": 0.542,
+    "y": 0.207,
+    "w": 0.4,
+    "h": 0.111
+  },
+  "subtext_zone": {
+    "x": 0.592,
+    "y": 0.341,
+    "w": 0.35,
+    "h": 0.061
+  },
+  "panel_zone": {
+    "box": {
+      "x": 0.508,
+      "y": 0.634,
+      "w": 0.433,
+      "h": 0.271
+    },
+    "color": "#4a1529",
+    "shape": "rounded_rect"
+  },
+  "product_zone": {
+    "x": 0.05,
+    "y": 0.111,
+    "w": 0.3,
+    "h": 0.78
+  },
+  "frames": [],
+  "background_style": "photographic lifestyle background, warm Mediterranean stone terrace with olive branches at golden hour, with soft white shade for text legibility",
+  "text_align": "center",
+  "direction": "rtl"
+}

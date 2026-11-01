@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { presetById } from '../src/shared/presets.js';
 import type { PlanBox, SourceAnalysis, TemplateSpec } from '../src/shared/schemas.js';
-import { freeOtherTexts, luminance, mirrorNorm, planLayout, tallProductCell, travelsWithPixels } from '../src/server/adfit/planner.js';
+import { freeHeadlineSubtext, freeOtherTexts, luminance, mirrorNorm, planLayout, tallProductCell, travelsWithPixels } from '../src/server/adfit/planner.js';
 
 function analysis(over: Partial<SourceAnalysis> = {}): SourceAnalysis {
   return {
@@ -339,5 +339,15 @@ describe('layout planner', () => {
       sourceWidth: 1080, sourceHeight: 1080, productCuts: CUTS, logoCut: LOGO_CUT, template: null,
     });
     expect(free.headline).not.toBeNull();
+  });
+
+  it('freeHeadlineSubtext keeps panel-carried text off the free layer', () => {
+    // Headline inside the panel + panel placed: travels, never re-rendered.
+    expect(freeHeadlineSubtext(analysis(), { headline: {}, subtext: null, panel: {} })).toEqual({ headline: false, subtext: false });
+    // Free headline outside the panel: rendered.
+    const free = analysis({ headline: { text: 'Hi', bbox: { x: 100, y: 100, w: 300, h: 60 }, bold: true, color: '#000000' } });
+    expect(freeHeadlineSubtext(free, { headline: {}, subtext: null, panel: {} }).headline).toBe(true);
+    // Safety: panel dropped but a text box exists — the text survives.
+    expect(freeHeadlineSubtext(analysis(), { headline: {}, subtext: null, panel: null }).headline).toBe(true);
   });
 });

@@ -1,0 +1,32 @@
+{
+  "id": "dafna",
+  "name": "דפנה",
+  "colors": [
+    "#5c1e3a",
+    "#c9963c",
+    "#f6efe3",
+    "#8a4a5e"
+  ],
+  "fonts": [],
+  "logo": "logo.png",
+  "templates": [
+    {
+      "id": "tpl-dafna-ig-11",
+      "preset": "ig-feed-11",
+      "image": "tpl-1x1.png",
+      "spec": "spec-1x1.json"
+    },
+    {
+      "id": "tpl-dafna-fb-link",
+      "preset": "fb-link",
+      "image": "tpl-1.91x1.png",
+      "spec": "spec-1.91x1.json"
+    },
+    {
+      "id": "tpl-dafna-story",
+      "preset": "ig-story-916",
+      "image": "tpl-9x16.png",
+      "spec": "spec-9x16.json"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "vela",
+  "name": "VELA",
+  "colors": [
+    "#0e4d5c",
+    "#e86a4a",
+    "#f3ece1",
+    "#2a7d8c"
+  ],
+  "fonts": [],
+  "logo": "logo.png",
+  "templates": [
+    {
+      "id": "tpl-vela-ig-11",
+      "preset": "ig-feed-11",
+      "image": "tpl-1x1.png",
+      "spec": "spec-1x1.json"
+    },
+    {
+      "id": "tpl-vela-fb-link",
+      "preset": "fb-link",
+      "image": "tpl-1.91x1.png",
+      "spec": "spec-1.91x1.json"
+    },
+    {
+      "id": "tpl-vela-story",
+      "preset": "ig-story-916",
+      "image": "tpl-9x16.png",
+      "spec": "spec-9x16.json"
+    }
+  ]
+}

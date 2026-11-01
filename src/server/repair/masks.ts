@@ -190,18 +190,95 @@ export function completeLogoMask(rgba: RgbaImage, samMask: Uint8Array, sparkBox:
   return growLogoMask(rgba, samMask, { x: x1, y: padded.y, w: Math.max(1, x2 - x1), h: padded.h }, LOGO_GROW_DILATE_PX);
 }
 
-/** Segment every target; see segmentTarget for the phrase+box union rule. */
+/**
+ * Clip a mask to a box + margin (mutates). The SAM phrase mask is unbounded,
+ * so with 2+ products one phrase can match a sibling ("bottle" also matching
+ * the jar — seen live as one cut containing both products). Clipping to the
+ * target's own Spark box keeps phrase completion inside while bounding the
+ * extent. Returns kept/dropped pixel counts for the trace.
+ */
+export function clipMaskToPaddedBox(mask: Uint8Array, W: number, H: number, box: PixelBox, margin: number): { kept: number; dropped: number } {
+  const bound = padBox({ ...box }, margin, W, H);
+  let kept = 0;
+  let dropped = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (!mask[y * W + x]) continue;
+      if (x >= bound.x && x < bound.x + bound.w && y >= bound.y && y < bound.y + bound.h) kept++;
+      else {
+        mask[y * W + x] = 0;
+        dropped++;
+      }
+    }
+  }
+  return { kept, dropped };
+}
+
+/**
+ * Fill enclosed holes in a mask (mutates). Flood-fills the background from
+ * the frame border; zero pixels NOT reached are interior holes and get filled.
+ * Products are opaque solids, so interior holes are always segmentation
+ * errors (seen live: a jar mask missing its lid and label, pasting with plate
+ * showing through as grey mottling). Never use on logos — lockup counters
+ * (A, e, o) are genuine holes.
+ */
+export function fillMaskHoles(mask: Uint8Array, W: number, H: number): number {
+  const seen = new Uint8Array(W * H);
+  const queue: number[] = [];
+  const push = (x: number, y: number): void => {
+    const i = y * W + x;
+    if (!mask[i] && !seen[i]) {
+      seen[i] = 1;
+      queue.push(i);
+    }
+  };
+  for (let x = 0; x < W; x++) {
+    push(x, 0);
+    push(x, H - 1);
+  }
+  for (let y = 1; y < H - 1; y++) {
+    push(0, y);
+    push(W - 1, y);
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const i = queue[head++] as number;
+    const x = i % W;
+    const y = Math.floor(i / W);
+    if (x > 0) push(x - 1, y);
+    if (x < W - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < H - 1) push(x, y + 1);
+  }
+  let filled = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (!mask[i] && !seen[i]) {
+      mask[i] = 1;
+      filled++;
+    }
+  }
+  return filled;
+}
+
+/** Fill ratio of a mask within its own bounding box (1 = solid). */
+export function maskFillInBox(mask: Uint8Array, W: number, H: number): number {
+  const box = maskBoundingBox(mask, W, H);
+  if (!box) return 0;
+  return maskArea(mask) / Math.max(1, box.w * box.h);
+}
+
+/** Segment every target in parallel; see segmentTarget for the phrase+box union rule. */
 export async function segmentTargets(client: OpenAI, input: MasksInput): Promise<MasksResult> {
+  const started = Date.now();
+  const results = await Promise.all(input.targets.map((target) => segmentTarget(client, input, target)));
   const masks = new Map<string, Uint8Array>();
   const labels: Record<string, string> = {};
   let calls = 0;
-  let latencyMs = 0;
-  for (const target of input.targets) {
-    const r = await segmentTarget(client, input, target);
+  input.targets.forEach((target, i) => {
+    const r = results[i] as { mask: Uint8Array; labels: string[]; calls: number; latencyMs: number };
     masks.set(target.id, r.mask);
     labels[target.id] = r.labels.join(' + ');
     calls += r.calls;
-    latencyMs += r.latencyMs;
-  }
-  return { masks, blockers: maskBlockers(masks, input.width, input.height), labels, latencyMs, calls };
+  });
+  return { masks, blockers: maskBlockers(masks, input.width, input.height), labels, latencyMs: Date.now() - started, calls };
 }

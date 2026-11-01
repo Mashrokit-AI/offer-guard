@@ -124,6 +124,135 @@ export function scaleRgbaNearest(src: RgbaImage, scale: number): RgbaImage {
 }
 
 /**
+ * Defringe a mask cutout's edge band (1-2 px): SAM masks often include a dark
+ * halo of background pixels along the edge (seen as the stair-stepped dark
+ * left edge of the GALI bottle). Every opaque pixel within `edgePx` of the
+ * mask boundary gets its RGB replaced by the nearest interior opaque pixel
+ * (search radius edgePx+4); alpha is untouched.
+ *
+ * Honesty note: the pixel proof erodes the core by `featherPx` before
+ * comparing, so with featherPx >= edgePx the proof core is byte-identical to
+ * the source and only the (reported, non-gated) feather ring is cleaned.
+ */
+export function defringeCut(src: RgbaImage, edgePx = 2): RgbaImage {
+  const { width: w, height: h } = src;
+  const opa = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) opa[i] = (src.data[i * 4 + 3] as number) > 0 ? 1 : 0;
+  const opaque = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && opa[y * w + x] === 1;
+  // Edge map, computed once: opaque within edgePx of a transparent pixel.
+  const edge = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!opaque(x, y)) continue;
+      outer: for (let dy = -edgePx; dy <= edgePx; dy++) {
+        for (let dx = -edgePx; dx <= edgePx; dx++) {
+          if (!opaque(x + dx, y + dy)) {
+            edge[y * w + x] = 1;
+            break outer;
+          }
+        }
+      }
+    }
+  }
+  const data = Buffer.from(src.data);
+  const R = edgePx + 4;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!edge[y * w + x]) continue;
+      // Nearest interior (non-edge) opaque pixel.
+      let best = -1;
+      let bestD = Infinity;
+      for (let dy = -R; dy <= R; dy++) {
+        for (let dx = -R; dx <= R; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (!opaque(nx, ny) || edge[ny * w + nx]) continue;
+          const d = dx * dx + dy * dy;
+          if (d < bestD) {
+            bestD = d;
+            best = (ny * w + nx) * 4;
+          }
+        }
+      }
+      if (best >= 0) {
+        const di = (y * w + x) * 4;
+        data[di] = src.data[best] as number;
+        data[di + 1] = src.data[best + 1] as number;
+        data[di + 2] = src.data[best + 2] as number;
+      }
+    }
+  }
+  return { data, width: w, height: h };
+}
+
+export interface SupportPoint {
+  /** Canvas-space center-x of the product's lowest opaque row. */
+  cx: number;
+  /** Canvas-space y of the lowest opaque row. */
+  y: number;
+  /** Width of the opaque run on that row (shadow width hint). */
+  width: number;
+}
+
+/**
+ * Lowest SUBSTANTIAL opaque row of a cutout in canvas space (the support
+ * point). Rows narrower than ~8% of the cut width are stray mask pixels or
+ * shadow remnants, never the product's footing — skipped (seen live as a
+ * speck shadow under a stray pixel below the GALI bottle).
+ */
+export function supportPoint(cut: RgbaImage, left: number, top: number): SupportPoint | null {
+  const minRun = Math.max(8, Math.round(cut.width * 0.08));
+  for (let y = cut.height - 1; y >= 0; y--) {
+    let x1 = -1;
+    let x2 = -1;
+    for (let x = 0; x < cut.width; x++) {
+      if ((cut.data[(y * cut.width + x) * 4 + 3] as number) > 0) {
+        if (x1 < 0) x1 = x;
+        x2 = x;
+      }
+    }
+    if (x1 >= 0 && x2 - x1 + 1 >= minRun) return { cx: left + (x1 + x2) / 2, y: top + y, width: x2 - x1 + 1 };
+  }
+  return null;
+}
+
+/**
+ * Contact shadow in code: a soft dark ellipse under the product's actual
+ * support point (lowest opaque pixels), drawn BEFORE the product is pasted.
+ * Skipped for floating products (opts.floating) or implausible plate
+ * lighting (opts.skip) — the caller decides, and the trace records it.
+ */
+export function drawContactShadow(
+  canvas: RgbaImage,
+  at: SupportPoint,
+  opts: { liftPx?: number; strength?: number; floating?: boolean; skip?: boolean } = {},
+): boolean {
+  if (opts.floating || opts.skip) return false;
+  const rx = Math.max(8, (at.width * 0.52) / 2);
+  const ry = Math.max(5, Math.round(rx * 0.16));
+  const cy = at.y + (opts.liftPx ?? 10);
+  const strength = opts.strength ?? 0.28;
+  const x0 = Math.max(0, Math.floor(at.cx - rx));
+  const x1 = Math.min(canvas.width - 1, Math.ceil(at.cx + rx));
+  const y0 = Math.max(0, Math.floor(cy - ry));
+  const y1 = Math.min(canvas.height - 1, Math.ceil(cy + ry));
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const dx = (x - at.cx) / rx;
+      const dy = (y - cy) / ry;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 1) continue;
+      const alpha = strength * (1 - d2) * (1 - d2);
+      const di = (y * canvas.width + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        canvas.data[di + c] = Math.round((canvas.data[di + c] as number) * (1 - alpha));
+      }
+    }
+  }
+  return true;
+}
+
+/**
  * Paste an RGBA cutout onto an RGBA canvas at (left, top) with a soft 1-2 px
  * edge feather: alpha comes from the cutout, but the outermost 2 px ring of
  * the opaque core is feathered (linear ramp) to avoid hard seams. Pixels

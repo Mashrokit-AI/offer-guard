@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completeLogoMask, growLogoMask } from '../src/server/repair/masks.js';
+import { clipMaskToPaddedBox, completeLogoMask, fillMaskHoles, growLogoMask, maskFillInBox } from '../src/server/repair/masks.js';
 import { padBox } from '../src/shared/geometry.js';
 import type { RgbaImage } from '../src/server/repair/composite.js';
 
@@ -91,6 +91,51 @@ describe('completeLogoMask', () => {
     const done = completeLogoMask(rgba, core, { x: 0, y: 0, w: 20, h: 20 });
     expect(countIn(done, 96, 32, 40)).toBe(8 * 12); // third letter fully added
     expect(countIn(done, 96, 80, 88)).toBe(0); // far blob stays out
+  });
+});
+
+describe('clipMaskToPaddedBox', () => {
+  it('drops a sibling product matched by the unbounded phrase mask', () => {
+    // Two blobs 40px apart; the target box covers only the left one.
+    const W = 96;
+    const H = 20;
+    const mask = new Uint8Array(W * H);
+    for (let y = 4; y < 16; y++) {
+      for (let x = 2; x < 20; x++) mask[y * W + x] = 1;
+      for (let x = 60; x < 78; x++) mask[y * W + x] = 1;
+    }
+    const { kept, dropped } = clipMaskToPaddedBox(mask, W, H, { x: 0, y: 0, w: 24, h: 20 }, 4);
+    expect(kept).toBe(18 * 12);
+    expect(dropped).toBe(18 * 12);
+    expect(countIn(mask, 96, 60, 78)).toBe(0);
+    expect(countIn(mask, 96, 2, 20)).toBe(18 * 12);
+  });
+});
+
+describe('fillMaskHoles', () => {
+  it('fills enclosed holes but keeps border-connected background', () => {
+    const W = 20;
+    const H = 10;
+    const mask = new Uint8Array(W * H).fill(1);
+    // Enclosed 2x2 hole.
+    mask[4 * W + 5] = 0; mask[4 * W + 6] = 0; mask[5 * W + 5] = 0; mask[5 * W + 6] = 0;
+    // Border-connected notch (top edge).
+    mask[0 * W + 10] = 0; mask[0 * W + 11] = 0; mask[1 * W + 10] = 0; mask[1 * W + 11] = 0;
+    const filled = fillMaskHoles(mask, W, H);
+    expect(filled).toBe(4);
+    expect(mask[4 * W + 5]).toBe(1);
+    expect(mask[0 * W + 10]).toBe(0);
+  });
+
+  it('scores sparse masks low', () => {
+    const W = 10;
+    const H = 10;
+    const solid = new Uint8Array(W * H).fill(1);
+    expect(maskFillInBox(solid, W, H)).toBe(1);
+    const sparse = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i += 2) sparse[i] = 1;
+    expect(maskFillInBox(sparse, W, H)).toBeLessThan(0.7);
+    expect(maskFillInBox(new Uint8Array(W * H), W, H)).toBe(0);
   });
 });
 

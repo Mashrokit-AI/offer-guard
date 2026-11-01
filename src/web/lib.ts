@@ -166,13 +166,21 @@ export function bboxDiv(bbox: Bbox, frameW: number, frameH: number, cls: string,
     class: `box ${cls}`,
     style: [
       `left:${((bbox.x / frameW) * 100).toFixed(2)}%`,
-      `top:${((bbox.y / frameW) * 100).toFixed(2)}%`,
+      `top:${((bbox.y / frameH) * 100).toFixed(2)}%`,
       `width:${((bbox.w / frameW) * 100).toFixed(2)}%`,
       `height:${((bbox.h / frameH) * 100).toFixed(2)}%`,
     ].join(';'),
   });
   if (tag) d.append(h('span', { class: 'tag' }, tag));
   return d;
+}
+
+/** One verification status badge (Pending / Passed / Fixed / Needs review). */
+export function checkBadge(lang: Lang, label: string, status: string): HTMLElement {
+  const cls = status === 'passed' ? 'v-clean' : status === 'fixed' ? 'v-page' : status === 'needs_review' ? 'v-err' : '';
+  const ico = status === 'passed' ? '✓' : status === 'fixed' ? '✓' : status === 'needs_review' ? '⚠' : '…';
+  const word = status === 'passed' ? t(lang, 'check_passed') : status === 'fixed' ? t(lang, 'check_fixed') : status === 'needs_review' ? t(lang, 'check_needs_review') : t(lang, 'check_pending');
+  return h('span', { class: `badge ${cls}`, title: word }, h('span', { class: 'ico', 'aria-hidden': 'true' }, ico), `${label}: ${word}`);
 }
 
 /** Brand mark: two overlapping placement frames. */
