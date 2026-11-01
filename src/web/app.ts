@@ -4,7 +4,7 @@ import { outputView } from './output.js';
 import { brandsView } from './brands.js';
 import { aboutView } from './about.js';
 
-const REPO = 'https://github.com/Mashrokit-AI/offer-guard';
+const REPO = 'https://github.com/Mashrokit-AI/matchpic';
 
 function shell(lang: Lang, main: HTMLElement, route: string): HTMLElement {
   const app = h('div', {});

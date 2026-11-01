@@ -1,7 +1,7 @@
 import { BRAND_NAME, h, t, type Lang } from './lib.js';
 
-const REPO = 'https://github.com/Mashrokit-AI/offer-guard';
-const BUILD_LOG = 'https://github.com/Mashrokit-AI/offer-guard/blob/main/docs/build/BUILD_LOG.md';
+const REPO = 'https://github.com/Mashrokit-AI/matchpic';
+const BUILD_LOG = 'https://github.com/Mashrokit-AI/matchpic/blob/main/docs/build/BUILD_LOG.md';
 
 export function aboutView(lang: Lang): HTMLElement {
   const root = h('div', {});
